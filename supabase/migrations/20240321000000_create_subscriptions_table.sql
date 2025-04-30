@@ -1,16 +1,20 @@
 -- Create subscriptions table
 CREATE TABLE IF NOT EXISTS public.subscriptions (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     stripe_customer_id TEXT,
     stripe_subscription_id TEXT,
     stripe_price_id TEXT,
-    status TEXT,
+    status TEXT NOT NULL,
+    plan_type TEXT NOT NULL,
+    current_period_start TIMESTAMP WITH TIME ZONE,
+    current_period_end TIMESTAMP WITH TIME ZONE,
+    cancel_at_period_end BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Create RLS policies
+-- Add RLS policies
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view their own subscriptions"
@@ -23,17 +27,7 @@ CREATE POLICY "Users can update their own subscriptions"
     FOR UPDATE
     USING (auth.uid() = user_id);
 
--- Create function to handle updated_at
-CREATE OR REPLACE FUNCTION public.handle_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = now();
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-
--- Create trigger for updated_at
-CREATE TRIGGER handle_updated_at
-    BEFORE UPDATE ON public.subscriptions
-    FOR EACH ROW
-    EXECUTE FUNCTION public.handle_updated_at(); 
+-- Create index for faster queries
+CREATE INDEX IF NOT EXISTS subscriptions_user_id_idx ON public.subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS subscriptions_stripe_customer_id_idx ON public.subscriptions(stripe_customer_id);
+CREATE INDEX IF NOT EXISTS subscriptions_stripe_subscription_id_idx ON public.subscriptions(stripe_subscription_id); 

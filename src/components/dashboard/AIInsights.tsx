@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -101,9 +102,6 @@ const AIInsights = () => {
             Specific Job
           </Button>
         </CardTitle>
-        <p className="text-xs text-muted-foreground mt-1">
-          Note: AI can make general predictions. For more accurate insights, use the "Specific Job" option above.
-        </p>
       </CardHeader>
       <CardContent>
         <div className="min-h-[100px] flex flex-col justify-between">
