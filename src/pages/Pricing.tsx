@@ -73,16 +73,26 @@ export default function Pricing() {
       <div className="container mx-auto py-16 flex items-center justify-center flex-col">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
         <p>Loading pricing information...</p>
-        <Button 
-          variant="outline" 
-          className="mt-4"
-          onClick={() => {
-            setPageLoading(false);
-            testSupabaseFunction();
-          }}
-        >
-          Skip Loading &amp; Debug
-        </Button>
+        <div className="flex gap-2 mt-4">
+          <Button 
+            variant="outline"
+            onClick={() => {
+              setPageLoading(false);
+              testSupabaseFunction();
+            }}
+          >
+            Skip Loading &amp; Debug
+          </Button>
+          <Button 
+            variant="default"
+            onClick={() => {
+              setPageLoading(false);
+              setError("Forced display of pricing plans");
+            }}
+          >
+            Show Pricing Plans Anyway
+          </Button>
+        </div>
       </div>
     );
   }
