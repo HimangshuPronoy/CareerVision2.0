@@ -18,7 +18,7 @@ async function testSupabaseFunction() {
     const SUPABASE_URL = "https://lxnmvvldfjmpoqsdhaug.supabase.co";
     
     console.log('Testing Supabase function...');
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/subscription-status?userId=${session.user.id}`, {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/bright-handler?userId=${session.user.id}`, {
       headers: {
         'Authorization': `Bearer ${session.access_token}`,
       }
