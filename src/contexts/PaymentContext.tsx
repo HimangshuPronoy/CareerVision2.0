@@ -5,8 +5,17 @@ import { supabase } from '@/integrations/supabase/client';
 
 // Define the Supabase function URLs
 const SUPABASE_URL = "https://lxnmvvldfjmpoqsdhaug.supabase.co";
-const CREATE_CHECKOUT_SESSION_URL = `${SUPABASE_URL}/functions/v1/create-checkout-session`;
-const SUBSCRIPTION_STATUS_URL = `${SUPABASE_URL}/functions/v1/subscription-status`;
+// Use the correct slugs from the function list
+const CREATE_CHECKOUT_SESSION_URL = `${SUPABASE_URL}/functions/v1/swift-task`;
+const SUBSCRIPTION_STATUS_URL = `${SUPABASE_URL}/functions/v1/bright-handler`;
+const STRIPE_WEBHOOK_URL = `${SUPABASE_URL}/functions/v1/swift-action`;
+
+// Debug info
+console.log('Payment service URLs:', {
+  checkout: CREATE_CHECKOUT_SESSION_URL,
+  status: SUBSCRIPTION_STATUS_URL,
+  webhook: STRIPE_WEBHOOK_URL
+});
 
 interface PaymentContextType {
   isSubscribed: boolean;
@@ -30,7 +39,7 @@ export const usePayment = () => {
 export function PaymentProvider({ children }: { children: ReactNode }) {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Changed to start not loading
   const [error, setError] = useState<string | null>(null);
 
   // Create a checkout session with Stripe
