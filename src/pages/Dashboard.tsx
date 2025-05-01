@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
@@ -114,10 +115,20 @@ const Dashboard = () => {
       setIndustryGrowthRate(10.5); // Default growth rate
     }
     
-    // Calculate learning progress based on skills
+    // Fix: Set learning progress based on completed resources or skills
+    // For now, we'll calculate it based on skills and recommendations
     if (hasSkills) {
-      // Calculate a rough estimate of learning progress based on number of skills
-      setLearningProgress(userProfile.skills.length);
+      // Calculate a rough estimate of learning progress
+      // We'll consider each skill as something learned, plus any active recommendations
+      let progress = userProfile.skills.length;
+      
+      // Add a bonus if the user has recommendations they're actively working on
+      if (recommendations && recommendations.length > 0) {
+        // We'll add a partial credit for each recommendation (assuming they're in progress)
+        progress += Math.ceil(recommendations.length / 2);
+      }
+      
+      setLearningProgress(progress);
     } else {
       setLearningProgress(0);
     }

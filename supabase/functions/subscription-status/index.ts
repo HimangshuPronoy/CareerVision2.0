@@ -30,25 +30,35 @@ serve(async (req) => {
   }
 
   try {
-    // Get request data
-    const { priceId, userId } = await req.json();
+    // Get user ID from query params
+    const url = new URL(req.url);
+    const userId = url.searchParams.get('userId');
+
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: 'User ID is required' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    // Get user data
-    const { data: user, error: userError } = await supabase
-      .from('profiles')
-      .select('email')
-      .eq('id', userId)
+    // Query subscriptions table
+    const { data: subscription, error } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single();
 
-    if (userError || !user?.email) {
+    if (error || !subscription) {
       return new Response(
-        JSON.stringify({ error: 'User not found' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        JSON.stringify({ isActive: false, plan: null }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
 
@@ -58,34 +68,27 @@ serve(async (req) => {
       apiVersion: '2022-11-15',
     });
 
-    // Define success and cancel URLs
-    const successUrl = Deno.env.get('PUBLIC_APP_URL') + '/payment-success?session_id={CHECKOUT_SESSION_ID}';
-    const cancelUrl = Deno.env.get('PUBLIC_APP_URL') + '/payment-cancel';
+    // Get subscription from Stripe
+    const stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id);
+    const isActive = stripeSubscription.status === 'active';
+    
+    // Get the price ID to determine the plan
+    const priceId = stripeSubscription.items.data[0].price.id;
+    let plan = 'none';
+    
+    if (priceId === Deno.env.get('VITE_STRIPE_PRICE_MONTHLY')) {
+      plan = 'monthly';
+    } else if (priceId === Deno.env.get('VITE_STRIPE_PRICE_ANNUAL')) {
+      plan = 'annual';
+    }
 
-    // Create Stripe checkout session
-    const session = await stripe.checkout.sessions.create({
-      customer_email: user.email,
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      mode: 'subscription',
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      metadata: {
-        userId,
-      },
-    });
-
-    // Return the session URL
+    // Return subscription status
     return new Response(
-      JSON.stringify({ url: session.url }),
+      JSON.stringify({ isActive, plan }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
   } catch (error) {
-    console.error('Error creating checkout session:', error);
+    console.error('Error checking subscription status:', error);
     return new Response(
       JSON.stringify({ error: (error as Error).message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }

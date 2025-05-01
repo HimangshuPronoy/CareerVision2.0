@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
@@ -12,14 +12,17 @@ import Signup from "./pages/Signup";
 import MarketTrends from "./pages/MarketTrends";
 import Skills from "./pages/Skills";
 import CareerPaths from "./pages/CareerPaths";
-import ResumeBuilder from "./pages/ResumeBuilder";
-import { Pricing } from './pages/Pricing';
 import NotFound from "./pages/NotFound";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Settings from "./pages/Settings";
+import ResumeBuilder from "./pages/ResumeBuilder";
+import Pricing from "./pages/Pricing";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentCancel from "./pages/PaymentCancel";
 import { AuthProvider } from "./contexts/AuthContext";
-import { SubscriptionGuard } from '@/components/SubscriptionGuard';
+import { PaymentProvider } from "./contexts/PaymentContext";
+import RouteGuard from "./components/RouteGuard";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -29,61 +32,81 @@ const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Router>
-          <AuthProvider>
+        <AuthProvider>
+          <PaymentProvider>
             <Toaster />
             <Sonner />
-            <Routes>
-              {/* Public routes */}
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/terms" element={<TermsOfService />} />
-              <Route path="/privacy" element={<PrivacyPolicy />} />
-              
-              {/* Protected routes */}
-              <Route path="/dashboard" element={
-                <SubscriptionGuard>
-                  <Dashboard />
-                </SubscriptionGuard>
-              } />
-              <Route path="/trends" element={
-                <SubscriptionGuard>
-                  <MarketTrends />
-                </SubscriptionGuard>
-              } />
-              <Route path="/profile" element={
-                <SubscriptionGuard>
-                  <Profile />
-                </SubscriptionGuard>
-              } />
-              <Route path="/skills" element={
-                <SubscriptionGuard>
-                  <Skills />
-                </SubscriptionGuard>
-              } />
-              <Route path="/career-paths" element={
-                <SubscriptionGuard>
-                  <CareerPaths />
-                </SubscriptionGuard>
-              } />
-              <Route path="/resume" element={
-                <SubscriptionGuard>
-                  <ResumeBuilder />
-                </SubscriptionGuard>
-              } />
-              <Route path="/settings" element={
-                <SubscriptionGuard>
-                  <Settings />
-                </SubscriptionGuard>
-              } />
-              
-              {/* Catch-all route */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AuthProvider>
-        </Router>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/dashboard" element={
+                  <RouteGuard>
+                    <Dashboard />
+                  </RouteGuard>
+                } />
+                <Route path="/trends" element={
+                  <RouteGuard>
+                    <MarketTrends />
+                  </RouteGuard>
+                } />
+                <Route path="/profile" element={
+                  <RouteGuard>
+                    <Profile />
+                  </RouteGuard>
+                } />
+                <Route path="/skills" element={
+                  <RouteGuard>
+                    <Skills />
+                  </RouteGuard>
+                } />
+                <Route path="/career-paths" element={
+                  <RouteGuard>
+                    <CareerPaths />
+                  </RouteGuard>
+                } />
+                <Route path="/settings" element={
+                  <RouteGuard>
+                    <Settings />
+                  </RouteGuard>
+                } />
+                <Route path="/resume-builder" element={
+                  <RouteGuard>
+                    <ResumeBuilder />
+                  </RouteGuard>
+                } />
+                <Route path="/pricing" element={
+                  <RouteGuard>
+                    <Pricing />
+                  </RouteGuard>
+                } />
+                <Route path="/payment-success" element={
+                  <RouteGuard>
+                    <PaymentSuccess />
+                  </RouteGuard>
+                } />
+                <Route path="/payment-cancel" element={
+                  <RouteGuard>
+                    <PaymentCancel />
+                  </RouteGuard>
+                } />
+                <Route path="/login" element={
+                  <RouteGuard requireAuth={false}>
+                    <Login />
+                  </RouteGuard>
+                } />
+                <Route path="/signup" element={
+                  <RouteGuard requireAuth={false}>
+                    <Signup />
+                  </RouteGuard>
+                } />
+                <Route path="/terms" element={<TermsOfService />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </PaymentProvider>
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

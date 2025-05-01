@@ -1,137 +1,168 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
-import { toast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
-  user: any;
+  session: Session | null;
+  user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, metadata?: { [key: string]: any }) => Promise<void>;
   signOut: () => Promise<void>;
+  error: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    // Listen for changes on auth state
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-
-      if (event === 'SIGNED_IN') {
-        // Check if user has an active subscription
-        const { data: subscriptionData } = await supabase
-          .from('subscriptions')
-          .select('status, cancel_at_period_end')
-          .eq('user_id', session?.user?.id)
-          .single();
-
-        if (!subscriptionData || subscriptionData.status !== 'active' || subscriptionData.cancel_at_period_end) {
-          navigate('/pricing');
+    // Set up auth state listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (event === 'SIGNED_IN') {
           toast({
-            title: 'Subscription Required',
-            description: 'Please select a subscription plan to continue.',
+            title: "Welcome!",
+            description: "You've successfully signed in.",
           });
-        } else {
-          navigate('/dashboard');
+        } else if (event === 'SIGNED_OUT') {
+          toast({
+            title: "Signed out",
+            description: "You've been signed out successfully.",
+          });
         }
       }
+    );
+
+    // Then check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
-
-  const signUp = async (email: string, password: string) => {
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      // After successful signup, redirect to pricing
-      navigate('/pricing');
-      toast({
-        title: 'Welcome!',
-        description: 'Please select a subscription plan to get started.',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to sign up',
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
+    return () => subscription.unsubscribe();
+  }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      setError(null);
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-
-      // Check subscription status after sign in
-      const { data: subscription } = await supabase
-        .from('subscriptions')
-        .select('status, cancel_at_period_end')
-        .eq('user_id', user?.id)
-        .maybeSingle();
-
-      if (!subscription || subscription.status !== 'active' || subscription.cancel_at_period_end) {
-        navigate('/pricing');
-        toast({
-          title: 'Subscription Required',
-          description: 'Please select a subscription plan to continue.',
-        });
-      } else {
-        navigate('/dashboard');
-      }
-    } catch (error) {
+    } catch (error: any) {
+      setError(error.message);
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to sign in',
-        variant: 'destructive',
+        title: "Sign in failed",
+        description: error.message,
+        variant: "destructive",
       });
-      throw error;
+    }
+  };
+
+  const signUp = async (email: string, password: string, metadata?: { [key: string]: any }) => {
+    try {
+      setError(null);
+      
+      // First, check if email already exists
+      const { data: existingUser, error: checkError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', email)
+        .single();
+      
+      if (existingUser) {
+        throw new Error('This email is already registered. Please use a different email or try logging in.');
+      }
+      
+      if (checkError && checkError.code !== 'PGRST116') {
+        // Only throw if it's not a "no rows returned" error
+        console.error('Error checking existing user:', checkError);
+      }
+
+      // Proceed with signup
+      const { data, error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          data: metadata,
+          emailRedirectTo: `${window.location.origin}/login`
+        }
+      });
+      
+      if (error) throw error;
+      
+      if (data && data.user) {
+        // Try to create profile manually if needed
+        try {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              full_name: metadata?.full_name || '',
+              username: email,
+              updated_at: new Date().toISOString()
+            });
+          
+          if (profileError && profileError.code !== '23505') { // Not a duplicate key error
+            console.error('Manual profile creation error:', profileError);
+          }
+          
+          // Also try to create user settings
+          const { error: settingsError } = await supabase
+            .from('user_settings')
+            .insert({
+              id: data.user.id
+            });
+          
+          if (settingsError && settingsError.code !== '23505') { // Not a duplicate key error
+            console.error('Manual user settings creation error:', settingsError);
+          }
+        } catch (err) {
+          console.error('Error creating user profile manually:', err);
+          // Continue anyway, as the user is created in auth
+        }
+      }
+      
+      toast({
+        title: "Account created",
+        description: "Your account has been created successfully. Please check your email for verification.",
+      });
+    } catch (error: any) {
+      setError(error.message);
+      toast({
+        title: "Sign up failed",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
   const signOut = async () => {
     try {
+      setError(null);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      navigate('/');
-    } catch (error) {
+    } catch (error: any) {
+      setError(error.message);
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to sign out',
-        variant: 'destructive',
+        title: "Sign out failed",
+        description: error.message,
+        variant: "destructive",
       });
-      throw error;
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ session, user, loading, signIn, signUp, signOut, error }}>
       {children}
     </AuthContext.Provider>
   );
