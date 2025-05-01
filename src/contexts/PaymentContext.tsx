@@ -119,7 +119,7 @@ export function PaymentProvider({ children }: { children: ReactNode }) {
       console.log('Checking subscription status for user:', session.user.id);
       
       try {
-        // Call your backend endpoint to check subscription status
+        // First attempt with URL from constant
         console.log('Calling subscription status endpoint:', `${SUBSCRIPTION_STATUS_URL}?userId=${session.user.id}`);
         console.log('Headers:', { Authorization: `Bearer ${session.access_token}` });
         
@@ -127,8 +127,8 @@ export function PaymentProvider({ children }: { children: ReactNode }) {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
           },
-          // Add timeout to prevent long waits
-          signal: AbortSignal.timeout(5000)
+          // Remove timeout as it might cause issues
+          // signal: AbortSignal.timeout(5000)
         });
 
         console.log('Response received:', response.status, response.statusText);
@@ -151,6 +151,31 @@ export function PaymentProvider({ children }: { children: ReactNode }) {
         setSubscriptionPlan(data.plan || null);
       } catch (fetchError) {
         console.error('Error fetching subscription status:', fetchError);
+        
+        // Try direct URL if constant URL fails
+        try {
+          console.log('Trying direct URL as fallback...');
+          const directUrl = `https://lxnmvvldfjmpoqsdhaug.supabase.co/functions/v1/bright-handler?userId=${session.user.id}`;
+          console.log('Direct URL:', directUrl);
+          
+          const fallbackResponse = await fetch(directUrl, {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+          });
+          
+          console.log('Fallback response received:', fallbackResponse.status, fallbackResponse.statusText);
+          
+          if (fallbackResponse.ok) {
+            const fallbackData = await fallbackResponse.json();
+            console.log('Fallback data:', fallbackData);
+            setIsSubscribed(fallbackData.isActive || false);
+            setSubscriptionPlan(fallbackData.plan || null);
+            return;
+          }
+        } catch (fallbackError) {
+          console.error('Fallback also failed:', fallbackError);
+        }
         
         // For development/testing, we'll set a default state and continue
         // In production, you might want to handle this differently
