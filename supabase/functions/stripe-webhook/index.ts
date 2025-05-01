@@ -12,9 +12,9 @@ declare const Deno: {
   };
 };
 
-// Updated CORS headers to allow requests from localhost
+// Updated CORS headers to allow requests from Netlify
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': 'https://careervisualize.netlify.app',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, stripe-signature',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Max-Age': '86400',

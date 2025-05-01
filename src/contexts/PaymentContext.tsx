@@ -120,6 +120,9 @@ export function PaymentProvider({ children }: { children: ReactNode }) {
       
       try {
         // Call your backend endpoint to check subscription status
+        console.log('Calling subscription status endpoint:', `${SUBSCRIPTION_STATUS_URL}?userId=${session.user.id}`);
+        console.log('Headers:', { Authorization: `Bearer ${session.access_token}` });
+        
         const response = await fetch(`${SUBSCRIPTION_STATUS_URL}?userId=${session.user.id}`, {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
@@ -127,6 +130,9 @@ export function PaymentProvider({ children }: { children: ReactNode }) {
           // Add timeout to prevent long waits
           signal: AbortSignal.timeout(5000)
         });
+
+        console.log('Response received:', response.status, response.statusText);
+        console.log('Response headers:', Object.fromEntries([...response.headers.entries()]));
 
         if (!response.ok) {
           const errorText = await response.text();
