@@ -1,18 +1,23 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TrendingUp, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 interface CareerPathCardProps {
   title: string;
   description: string;
   matchPercentage: number;
   skillsNeeded: string[];
+  onViewDetails?: () => void;
 }
 
-const CareerPathCard = ({ title, description, matchPercentage, skillsNeeded }: CareerPathCardProps) => {
+const CareerPathCard = ({ 
+  title, 
+  description, 
+  matchPercentage, 
+  skillsNeeded,
+  onViewDetails 
+}: CareerPathCardProps) => {
   return (
     <Card className="h-full">
       <CardHeader>
@@ -37,12 +42,15 @@ const CareerPathCard = ({ title, description, matchPercentage, skillsNeeded }: C
           </div>
         </div>
         <div className="mt-4">
-          <Link to="/career-paths">
-            <Button variant="outline" className="w-full" size="sm">
-              View Career Path
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          </Link>
+          <Button 
+            variant="outline" 
+            className="w-full" 
+            size="sm"
+            onClick={onViewDetails}
+          >
+            View Details
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
         </div>
       </CardContent>
     </Card>
