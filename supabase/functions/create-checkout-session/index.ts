@@ -12,9 +12,9 @@ declare const Deno: {
   };
 };
 
-// Updated CORS headers to allow requests from Netlify
+// Updated CORS headers to allow requests from any origin during testing
 const corsHeaders = {
-  'Access-Control-Allow-Origin': 'https://careervisualize.netlify.app',
+  'Access-Control-Allow-Origin': '*', // Allow all origins for testing
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Max-Age': '86400',

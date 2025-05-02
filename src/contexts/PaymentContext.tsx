@@ -60,12 +60,27 @@ export function PaymentProvider({ children }: { children: ReactNode }) {
       
       // For development/testing, return a mock response if the Supabase function isn't working
       try {
+        console.log('Preparing checkout session request with data:', {
+          priceId,
+          userId: user.id,
+        });
+        
+        // Get the access token
+        const sessionResult = await supabase.auth.getSession();
+        console.log('Auth session available:', !!sessionResult.data.session);
+        
+        if (!sessionResult.data.session) {
+          throw new Error('No auth session available');
+        }
+        
         // Call your backend endpoint to create a checkout session
+        console.log('Calling Edge Function URL:', CREATE_CHECKOUT_SESSION_URL);
+        
         const response = await fetch(CREATE_CHECKOUT_SESSION_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+            'Authorization': `Bearer ${sessionResult.data.session.access_token}`,
           },
           body: JSON.stringify({
             priceId,
@@ -73,14 +88,30 @@ export function PaymentProvider({ children }: { children: ReactNode }) {
           }),
         });
 
+        console.log('Response status:', response.status);
+        console.log('Response status text:', response.statusText);
+        
+        // Try to get response text regardless of status
+        let responseText;
+        try {
+          responseText = await response.text();
+          console.log('Response text:', responseText);
+        } catch (textError) {
+          console.error('Error getting response text:', textError);
+        }
+
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Error response from server:', errorText);
           throw new Error(`Failed to create checkout session: ${response.status} ${response.statusText}`);
         }
 
-        const data = await response.json();
-        console.log('Checkout session created:', data);
+        let data;
+        try {
+          data = JSON.parse(responseText || '{}');
+          console.log('Checkout session created:', data);
+        } catch (parseError) {
+          console.error('Error parsing response JSON:', parseError);
+          throw new Error('Invalid response format from server');
+        }
         
         if (data.error) {
           throw new Error(data.error.message || 'Unknown error creating checkout session');
