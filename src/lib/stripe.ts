@@ -1,7 +1,7 @@
 import { loadStripe } from '@stripe/stripe-js';
 
 // Stripe public key (available in the Stripe dashboard)
-const STRIPE_PUBLIC_KEY = 'pk_test_51RJuk1JjRarA6eH8vk9vkuAKrLfB22RlNJUYMavmXjSL9UvBc9IeALfxaDBLv8Qmw0f1PEzlDJw6OhQFFdkJfRFA00rE2QmJxT';
+const STRIPE_PUBLIC_KEY = 'pk_live_51RIzYUJjRarA6eH8LlPYyW8gbQWbPzN7lZMzuwDeu2I2W2f9YNQ54PUIczUAdVBpzkwUm0NWowrEuzLU78cKEZWl00BvwArCSt';
 
 // Defined product price IDs (available in the Stripe dashboard)
 export const PRICE_IDS = {
@@ -9,10 +9,40 @@ export const PRICE_IDS = {
   YEARLY: 'price_1RJumvJjRarA6eH8KTvJCoGL',
 };
 
+// Cache Stripe instance to avoid multiple loads
+let stripePromise: Promise<any> | null = null;
+
 // Initialize Stripe with the public key
 export const getStripe = async () => {
-  const stripePromise = loadStripe(STRIPE_PUBLIC_KEY);
-  return stripePromise;
+  if (!stripePromise) {
+    console.log('Initializing Stripe with public key:', STRIPE_PUBLIC_KEY);
+    
+    // Add options parameter to fix localization issues
+    const options = {
+      locale: 'auto' as const, // Type assertion to fix type issue
+    };
+    
+    try {
+      stripePromise = loadStripe(STRIPE_PUBLIC_KEY, options);
+    } catch (initError) {
+      console.error('Error during Stripe initialization:', initError);
+      return null;
+    }
+  }
+  
+  try {
+    const stripe = await stripePromise;
+    if (!stripe) {
+      console.error('Failed to initialize Stripe');
+      return null;
+    }
+    return stripe;
+  } catch (error) {
+    console.error('Error initializing Stripe:', error);
+    // Clear the promise to allow retry on next attempt
+    stripePromise = null;
+    return null;
+  }
 };
 
 // Constants for subscription plans

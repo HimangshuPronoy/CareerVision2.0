@@ -36,6 +36,7 @@ export const useStripeCheckout = () => {
     });
   };
 
+  // This function contains the main checkout session logic
   const createCheckoutSession = async (priceId: string) => {
     if (!user) {
       toast({
@@ -54,6 +55,17 @@ export const useStripeCheckout = () => {
     setLoading(true);
 
     try {
+      // Validate inputs before proceeding
+      if (!priceId) {
+        throw new Error('Price ID is required');
+      }
+      
+      if (!SUPABASE_ANON_KEY) {
+        throw new Error('Supabase key is missing. Check configuration.');
+      }
+
+      console.log(`Creating checkout session for price: ${priceId}, user: ${user.id}`);
+      
       // Call the Supabase function directly with fetch
       const response = await fetch(
         `${SUPABASE_URL}/functions/v1/create-checkout-session`,
@@ -71,12 +83,41 @@ export const useStripeCheckout = () => {
         }
       );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create checkout session');
+      console.log('Response status:', response.status);
+      
+      // Handle 401 errors specifically
+      if (response.status === 401) {
+        console.error('Authorization error when calling Supabase function');
+        throw new Error('Failed to authenticate with Supabase. Please refresh the page and try again.');
+      }
+      
+      // Get the full response text for debugging
+      const responseText = await response.text();
+      console.log('Response body:', responseText);
+      
+      let data;
+      try {
+        // Try to parse as JSON if possible
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Error parsing response as JSON:', parseError);
+        throw new Error(`Invalid response format: ${responseText}`);
       }
 
-      const data = await response.json();
+      if (!response.ok) {
+        console.error('Server error details:', data);
+        if (data.error && data.error.includes('No such customer')) {
+          throw new Error('Customer not found in Stripe. Please try again.');
+        }
+        throw new Error(data.error || `Request failed with status ${response.status}`);
+      }
+
+      if (!data.sessionId) {
+        console.error('Missing session ID in response:', data);
+        throw new Error('No session ID returned from server');
+      }
+
+      console.log('Session ID received:', data.sessionId);
 
       // Load Stripe.js
       const stripe = await getStripe();
@@ -85,19 +126,33 @@ export const useStripeCheckout = () => {
         throw new Error('Stripe failed to initialize');
       }
 
+      console.log('Redirecting to Stripe checkout...');
+      
       // Redirect to checkout page
       const { error: redirectError } = await stripe.redirectToCheckout({
         sessionId: data.sessionId,
       });
 
       if (redirectError) {
+        console.error('Redirect error details:', redirectError);
         throw redirectError;
       }
     } catch (error) {
       console.error('Error creating checkout session:', error);
+      let errorMessage = 'Failed to start checkout process. Please try again later.';
+      
+      // Provide more helpful error messages for common issues
+      if (error.message && error.message.includes('Cannot find module')) {
+        errorMessage = 'Stripe module loading error. Please refresh and try again.';
+      } else if (error.message && (error.message.includes('unauthorized') || error.message.includes('authenticate'))) {
+        errorMessage = 'Authorization failed. Please refresh the page and try again.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
-        title: 'Error',
-        description: 'Failed to start checkout process. Please try again.',
+        title: 'Error Creating Checkout Session',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -138,6 +193,8 @@ export const useStripeCheckout = () => {
     setLoading(true);
 
     try {
+      console.log(`Creating portal session for user: ${user.id}`);
+      
       // Call the Supabase function directly with fetch
       const response = await fetch(
         `${SUPABASE_URL}/functions/v1/create-portal-session`,
@@ -153,12 +210,30 @@ export const useStripeCheckout = () => {
         }
       );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create portal session');
+      console.log('Response status:', response.status);
+      
+      // Get the full response text for debugging
+      const responseText = await response.text();
+      console.log('Response body:', responseText);
+      
+      let data;
+      try {
+        // Try to parse as JSON if possible
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Error parsing response as JSON:', parseError);
+        throw new Error(`Invalid response format: ${responseText}`);
       }
 
-      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || `Request failed with status ${response.status}`);
+      }
+
+      if (!data.url) {
+        throw new Error('No portal URL returned from server');
+      }
+
+      console.log('Portal URL received:', data.url);
 
       // Redirect to the customer portal
       window.location.href = data.url;
@@ -166,7 +241,7 @@ export const useStripeCheckout = () => {
       console.error('Error creating portal session:', error);
       toast({
         title: 'Error',
-        description: 'Failed to open customer portal. Please try again.',
+        description: error.message || 'Failed to open customer portal. Please try again.',
         variant: 'destructive',
       });
     } finally {
