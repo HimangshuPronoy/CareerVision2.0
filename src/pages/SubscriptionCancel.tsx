@@ -1,50 +1,42 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import MainLayout from '@/components/layouts/MainLayout';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle } from 'lucide-react';
+import { XCircle } from 'lucide-react';
 
-const SubscriptionCancel: React.FC = () => {
+export default function SubscriptionCancel() {
+  const navigate = useNavigate();
+
   return (
-    <MainLayout>
-      <div className="container mx-auto py-16 px-4 max-w-md">
-        <Card className="border-2">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-100">
-              <AlertTriangle className="h-8 w-8 text-amber-600" />
-            </div>
-            <CardTitle className="text-2xl">Subscription Cancelled</CardTitle>
-            <CardDescription>
-              Your subscription process was not completed
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="mb-4">
-              The subscription process was cancelled or an error occurred during payment processing. Your account has not been charged.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              If you experienced any issues or have questions, please feel free to contact our support team.
-            </p>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-3">
-            <Button 
-              className="w-full bg-gradient-to-r from-careervision-500 to-insight-500 hover:from-careervision-600 hover:to-insight-600"
-              asChild
-            >
-              <Link to="/pricing">Try Again</Link>
-            </Button>
-            <Button variant="outline" className="w-full" asChild>
-              <Link to="/dashboard">Go to Dashboard</Link>
-            </Button>
-            <Button variant="link" className="w-full" asChild>
-              <a href="mailto:support@careervision.io">Contact Support</a>
-            </Button>
-          </CardFooter>
-        </Card>
+    <div className="container max-w-md py-20">
+      <div className="text-center space-y-6">
+        <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
+          <XCircle className="h-10 w-10 text-red-600 dark:text-red-400" />
+        </div>
+        
+        <h1 className="text-3xl font-bold tracking-tight">
+          Subscription Cancelled
+        </h1>
+        
+        <p className="text-muted-foreground">
+          Your subscription process was cancelled. No charges have been made.
+          You can still use the free features of the platform.
+        </p>
+        
+        <div className="flex flex-col space-y-3 pt-6">
+          <Button 
+            onClick={() => navigate('/dashboard')}
+            size="lg"
+          >
+            Go to Dashboard
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={() => navigate('/pricing')}
+          >
+            View Plans
+          </Button>
+        </div>
       </div>
-    </MainLayout>
+    </div>
   );
-};
-
-export default SubscriptionCancel; 
+} 

@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { stripePromise } from '@/integrations/stripe/client';
-import { useToast } from '@/components/ui/use-toast';
+import { getStripe, PRICE_IDS } from '@/lib/stripe';
+import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
 const SUPABASE_URL = "https://lxnmvvldfjmpoqsdhaug.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4bm12dmxkZmptcG9xc2RoYXVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMxNTI0ODIsImV4cCI6MjA1ODcyODQ4Mn0.sUx3Ee_1NFtyjlzorybqkka-nEyjqpzImh4kEfPbsAE";
+
+// Flag to use mock data (set to true for testing without actual Stripe/Supabase)
+const USE_MOCK_DATA = true;
 
 export const useStripeCheckout = () => {
   const [loading, setLoading] = useState(false);
@@ -19,7 +21,7 @@ export const useStripeCheckout = () => {
     let plan = 'monthly';
     
     // Determine which plan based on price ID
-    if (priceId.includes('1RJumvJjRarA6eH8KTvJCoGL')) {
+    if (priceId === PRICE_IDS.YEARLY) {
       plan = 'yearly';
     }
     
@@ -44,14 +46,15 @@ export const useStripeCheckout = () => {
       return;
     }
 
-    // For testing/development, use the mock function instead
-    // Comment out this return when ready to use real Stripe integration
-    return mockSubscription(priceId);
+    // For testing/development, use the mock function if enabled
+    if (USE_MOCK_DATA) {
+      return mockSubscription(priceId);
+    }
 
     setLoading(true);
 
     try {
-      // Call the Supabase function directly with fetch instead of using the SDK
+      // Call the Supabase function directly with fetch
       const response = await fetch(
         `${SUPABASE_URL}/functions/v1/create-checkout-session`,
         {
@@ -76,7 +79,7 @@ export const useStripeCheckout = () => {
       const data = await response.json();
 
       // Load Stripe.js
-      const stripe = await stripePromise;
+      const stripe = await getStripe();
       
       if (!stripe) {
         throw new Error('Stripe failed to initialize');
@@ -127,14 +130,15 @@ export const useStripeCheckout = () => {
       return;
     }
 
-    // For testing/development, use the mock function instead
-    // Comment out this return when ready to use real Stripe integration
-    return mockPortalManagement();
+    // For testing/development, use the mock function if enabled
+    if (USE_MOCK_DATA) {
+      return mockPortalManagement();
+    }
 
     setLoading(true);
 
     try {
-      // Call the Supabase function directly with fetch instead of using the SDK
+      // Call the Supabase function directly with fetch
       const response = await fetch(
         `${SUPABASE_URL}/functions/v1/create-portal-session`,
         {

@@ -4,7 +4,7 @@ import MainLayout from '@/components/layouts/MainLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useStripeCheckout } from '@/hooks/useStripeCheckout';
-import { STRIPE_CONFIG } from '@/integrations/stripe/config';
+import { PRICE_IDS, PRICES, YEARLY_SAVINGS_PERCENTAGE } from '@/lib/stripe';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Check, X, Loader2 } from 'lucide-react';
@@ -69,7 +69,7 @@ const Pricing: React.FC = () => {
                 onClick={() => setBillingInterval('yearly')}
               >
                 <span>Annual billing</span>
-                <Badge className="ml-2 bg-green-500 text-white">Save 28%</Badge>
+                <Badge className="ml-2 bg-green-500 text-white">Save {YEARLY_SAVINGS_PERCENTAGE}%</Badge>
               </button>
             </div>
           </div>
@@ -134,13 +134,18 @@ const Pricing: React.FC = () => {
               <div className="mt-1">
                 <span className="text-4xl font-bold">
                   {billingInterval === 'monthly' 
-                    ? `$${STRIPE_CONFIG.MONTHLY_PLAN_PRICE}` 
-                    : `$${STRIPE_CONFIG.YEARLY_PLAN_PRICE}`}
+                    ? `$${PRICES.MONTHLY}` 
+                    : `$${PRICES.YEARLY}`}
                 </span>
                 <span className="text-muted-foreground">
                   {billingInterval === 'monthly' ? '/month' : '/year'}
                 </span>
               </div>
+              {billingInterval === 'yearly' && (
+                <div className="text-sm text-green-500 mt-1">
+                  ${PRICES.YEARLY_MONTHLY_EQUIVALENT}/month billed annually
+                </div>
+              )}
             </CardHeader>
             <CardContent className="pb-6">
               <ul className="space-y-3">
@@ -173,8 +178,8 @@ const Pricing: React.FC = () => {
                     className="w-full bg-gradient-to-r from-careervision-500 to-insight-500 hover:from-careervision-600 hover:to-insight-600"
                     onClick={() => handleSubscribe(
                       billingInterval === 'monthly' 
-                        ? STRIPE_CONFIG.MONTHLY_PLAN_PRICE_ID 
-                        : STRIPE_CONFIG.YEARLY_PLAN_PRICE_ID
+                        ? PRICE_IDS.MONTHLY 
+                        : PRICE_IDS.YEARLY
                     )}
                     disabled={loading}
                   >

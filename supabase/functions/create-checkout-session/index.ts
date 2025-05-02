@@ -7,7 +7,7 @@ const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
 })
 
 // This is needed to handle CORS preflight requests
-async function handleCors(req: Request): Promise<Response> {
+async function handleCors(req: Request): Promise<Response | null> {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -43,7 +43,7 @@ serve(async (req) => {
         },
       ],
       mode: 'subscription',
-      success_url: `${Deno.env.get('BASE_URL')}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${Deno.env.get('BASE_URL')}/subscription/success?session_id={CHECKOUT_SESSION_ID}&plan=${priceId === 'price_1RJumRJjRarA6eH84kygqd80' ? 'monthly' : 'yearly'}`,
       cancel_url: `${Deno.env.get('BASE_URL')}/subscription/cancel`,
       customer: customerId || undefined,
       customer_email: !customerId ? customerEmail : undefined,

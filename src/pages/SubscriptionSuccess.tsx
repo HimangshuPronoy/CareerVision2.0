@@ -1,73 +1,62 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import MainLayout from '@/components/layouts/MainLayout';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { CheckCircle } from 'lucide-react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { PLANS } from '@/lib/stripe';
 
-const SubscriptionSuccess: React.FC = () => {
-  const { user } = useAuth();
-  const { refreshSubscription, subscription } = useSubscription();
-  const navigate = useNavigate();
+export default function SubscriptionSuccess() {
   const location = useLocation();
-  const [planType, setPlanType] = useState<string>('subscription');
+  const navigate = useNavigate();
+  const { refreshSubscription, subscription } = useSubscription();
+  const params = new URLSearchParams(location.search);
+  const sessionId = params.get('session_id');
+  const plan = params.get('plan') as 'monthly' | 'yearly' || null;
 
   useEffect(() => {
-    if (user) {
-      // Refresh subscription status when the page loads
-      refreshSubscription();
-      
-      // Get plan type from URL if available
-      const params = new URLSearchParams(location.search);
-      const plan = params.get('plan');
-      if (plan) {
-        setPlanType(plan === 'yearly' ? 'yearly' : 'monthly');
-      } else if (subscription.plan) {
-        setPlanType(subscription.plan);
-      }
-    } else {
-      // If not authenticated, redirect to login
-      navigate('/login', { replace: true });
-    }
-  }, [user, location]);
+    // Refresh subscription status when this page loads
+    refreshSubscription();
+  }, []);
+
+  const getPlanText = () => {
+    if (plan === PLANS.MONTHLY) return 'Monthly';
+    if (plan === PLANS.YEARLY) return 'Yearly';
+    if (subscription.plan === PLANS.MONTHLY) return 'Monthly';
+    if (subscription.plan === PLANS.YEARLY) return 'Yearly';
+    return 'Premium';
+  };
 
   return (
-    <MainLayout>
-      <div className="container mx-auto py-16 px-4 max-w-md">
-        <Card className="border-2 border-green-200">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
-            <CardTitle className="text-2xl">Subscription Successful!</CardTitle>
-            <CardDescription>
-              Thank you for subscribing to CareerVision {planType} plan.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-gray-600 mb-6">
-              Your {planType} subscription is now active. You now have access to all premium features of CareerVision.
-            </p>
-            <p className="text-sm text-gray-500">
-              {subscription.currentPeriodEnd && (
-                <span>Your subscription will renew on {subscription.currentPeriodEnd.toLocaleDateString()}.</span>
-              )}
-            </p>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-2">
-            <Button className="w-full" asChild>
-              <Link to="/dashboard">Go to Dashboard</Link>
-            </Button>
-            <Button variant="outline" className="w-full" asChild>
-              <Link to="/settings">Manage Subscription</Link>
-            </Button>
-          </CardFooter>
-        </Card>
+    <div className="container max-w-md py-20">
+      <div className="text-center space-y-6">
+        <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/20">
+          <CheckCircle className="h-10 w-10 text-green-600 dark:text-green-400" />
+        </div>
+        
+        <h1 className="text-3xl font-bold tracking-tight">
+          Subscription Successful!
+        </h1>
+        
+        <p className="text-muted-foreground">
+          You're now subscribed to the {getPlanText()} plan. Thank you for upgrading!
+          All premium features have been unlocked for your account.
+        </p>
+        
+        <div className="flex flex-col space-y-3 pt-6">
+          <Button 
+            onClick={() => navigate('/dashboard')}
+            size="lg"
+          >
+            Go to Dashboard
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={() => navigate('/settings')}
+          >
+            Manage Subscription
+          </Button>
+        </div>
       </div>
-    </MainLayout>
+    </div>
   );
-};
-
-export default SubscriptionSuccess; 
+} 
