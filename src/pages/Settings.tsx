@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useSubscription } from '@/contexts/SubscriptionContext';
+import { useStripeCheckout } from '@/hooks/useStripeCheckout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,11 +12,14 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Settings as SettingsIcon, Save, Bell, Shield, Moon, Sun, LogOut, CreditCard } from 'lucide-react';
-import ManageSubscription from '@/components/settings/ManageSubscription';
+import { STRIPE_CONFIG } from '@/integrations/stripe/config';
+import { Settings as SettingsIcon, Save, Bell, Shield, Moon, Sun, LogOut, CreditCard, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 const Settings = () => {
   const { user, signOut } = useAuth();
+  const { subscription, refreshSubscription } = useSubscription();
+  const { loading: stripeLoading, createPortalSession } = useStripeCheckout();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
@@ -118,6 +123,19 @@ const Settings = () => {
     }
   };
 
+  const handleManageSubscription = async () => {
+    await createPortalSession();
+  };
+
+  const formatDate = (timestamp: Date | null) => {
+    if (!timestamp) return 'N/A';
+    return new Intl.DateTimeFormat('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    }).format(timestamp);
+  };
+
   return (
     <DashboardLayout>
       <div className="mb-6">
@@ -194,17 +212,156 @@ const Settings = () => {
           </Card>
         </TabsContent>
         
-        <TabsContent value="subscription">
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              <h2 className="text-xl font-semibold">Subscription Management</h2>
-            </div>
-            <p className="text-muted-foreground">
-              View and manage your CareerVision subscription
-            </p>
-            <ManageSubscription />
-          </div>
+        <TabsContent value="subscription" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Subscription Plan
+              </CardTitle>
+              <CardDescription>
+                Manage your subscription and billing information
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {subscription.loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <>
+                  <div className="grid gap-4 p-6 border rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium">Current Plan</h3>
+                      {subscription.isActive ? (
+                        <Badge className="bg-green-500">Active</Badge>
+                      ) : (
+                        <Badge variant="outline">Free</Badge>
+                      )}
+                    </div>
+                    
+                    <div className="grid gap-1">
+                      <div className="text-2xl font-bold">
+                        {subscription.plan === 'monthly' && 'Pro Monthly'}
+                        {subscription.plan === 'yearly' && 'Pro Yearly'}
+                        {!subscription.plan && 'Free Plan'}
+                      </div>
+                      
+                      {subscription.plan && (
+                        <div className="text-muted-foreground">
+                          {subscription.plan === 'monthly' && `$${STRIPE_CONFIG.MONTHLY_PLAN_PRICE}/month`}
+                          {subscription.plan === 'yearly' && `$${STRIPE_CONFIG.YEARLY_PLAN_PRICE}/year`}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {subscription.isActive && (
+                      <div className="mt-2 grid gap-1 text-sm">
+                        <div className="flex items-center text-muted-foreground">
+                          <span>Current period ends on:</span>
+                          <span className="ml-1 font-semibold text-foreground">
+                            {formatDate(subscription.currentPeriodEnd)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </CardContent>
+            <CardFooter>
+              {subscription.isActive ? (
+                <Button 
+                  onClick={handleManageSubscription} 
+                  disabled={stripeLoading} 
+                  className="gap-2"
+                >
+                  {stripeLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="h-4 w-4" />
+                      Manage Subscription
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button 
+                  onClick={() => navigate('/pricing')} 
+                  className="gap-2 bg-gradient-to-r from-careervision-500 to-insight-500 hover:from-careervision-600 hover:to-insight-600"
+                >
+                  <CreditCard className="h-4 w-4" />
+                  Upgrade to Pro
+                </Button>
+              )}
+            </CardFooter>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Subscription Benefits</CardTitle>
+              <CardDescription>
+                Features included in your current plan
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                <li className="flex items-start">
+                  <CheckCircle className="h-5 w-5 text-green-500 shrink-0 mr-2" />
+                  <span>Basic career insights</span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle className="h-5 w-5 text-green-500 shrink-0 mr-2" />
+                  <span>Job market overview</span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle className="h-5 w-5 text-green-500 shrink-0 mr-2" />
+                  <span>Resume builder (1 resume)</span>
+                </li>
+                
+                <li className={`flex items-start ${subscription.isActive ? '' : 'text-muted-foreground'}`}>
+                  {subscription.isActive ? (
+                    <CheckCircle className="h-5 w-5 text-green-500 shrink-0 mr-2" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 text-muted-foreground shrink-0 mr-2" />
+                  )}
+                  <span>Advanced career insights</span>
+                </li>
+                
+                <li className={`flex items-start ${subscription.isActive ? '' : 'text-muted-foreground'}`}>
+                  {subscription.isActive ? (
+                    <CheckCircle className="h-5 w-5 text-green-500 shrink-0 mr-2" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 text-muted-foreground shrink-0 mr-2" />
+                  )}
+                  <span>AI-powered career recommendations</span>
+                </li>
+                
+                <li className={`flex items-start ${subscription.isActive ? '' : 'text-muted-foreground'}`}>
+                  {subscription.isActive ? (
+                    <CheckCircle className="h-5 w-5 text-green-500 shrink-0 mr-2" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 text-muted-foreground shrink-0 mr-2" />
+                  )}
+                  <span>Unlimited resume builder</span>
+                </li>
+              </ul>
+            </CardContent>
+            {!subscription.isActive && (
+              <CardFooter>
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate('/pricing')} 
+                  className="gap-2 w-full"
+                >
+                  View All Plan Features
+                </Button>
+              </CardFooter>
+            )}
+          </Card>
         </TabsContent>
         
         <TabsContent value="preferences" className="space-y-4">
@@ -275,7 +432,7 @@ const Settings = () => {
                 <div>
                   <p className="font-medium">Weekly Digest</p>
                   <p className="text-sm text-muted-foreground">
-                    Receive a weekly summary of career insights
+                    Receive a weekly summary of your career progress
                   </p>
                 </div>
                 <Switch 
@@ -288,7 +445,7 @@ const Settings = () => {
               
               <div className="flex items-center justify-between space-x-2">
                 <div>
-                  <p className="font-medium">Job Opportunity Alerts</p>
+                  <p className="font-medium">Job Alerts</p>
                   <p className="text-sm text-muted-foreground">
                     Get notified about new job opportunities matching your profile
                   </p>
@@ -296,7 +453,7 @@ const Settings = () => {
                 <Switch 
                   id="job-alerts" 
                   checked={jobAlerts} 
-                  onCheckedChange={setJobAlerts} 
+                  onCheckedChange={setJobAlerts}
                   disabled={!emailNotifications}
                 />
               </div>
@@ -317,15 +474,15 @@ const Settings = () => {
                 Privacy Settings
               </CardTitle>
               <CardDescription>
-                Control your data and privacy preferences
+                Control your data privacy and sharing options
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between space-x-2">
                 <div>
-                  <p className="font-medium">Data Sharing for Personalization</p>
+                  <p className="font-medium">Data Sharing</p>
                   <p className="text-sm text-muted-foreground">
-                    Allow us to use your data to improve career recommendations
+                    Allow your anonymized data to be used for improving our services
                   </p>
                 </div>
                 <Switch 
@@ -339,18 +496,6 @@ const Settings = () => {
                 <Save className="h-4 w-4" />
                 Save Privacy Settings
               </Button>
-              
-              <div className="pt-4 border-t">
-                <h3 className="font-medium mb-2">Your Data</h3>
-                <div className="flex flex-col space-y-2">
-                  <Button variant="outline" size="sm">
-                    Download Your Data
-                  </Button>
-                  <Button variant="outline" size="sm" className="text-destructive">
-                    Delete All Your Data
-                  </Button>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>

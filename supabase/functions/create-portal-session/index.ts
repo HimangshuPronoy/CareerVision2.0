@@ -7,7 +7,7 @@ const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
 })
 
 // This is needed to handle CORS preflight requests
-async function handleCors(req: Request): Promise<Response> {
+async function handleCors(req: Request): Promise<Response | null> {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -21,11 +21,11 @@ serve(async (req) => {
 
   try {
     // Get request body
-    const { priceId, customerId, customerEmail } = await req.json()
+    const { customerId } = await req.json()
 
-    if (!priceId) {
+    if (!customerId) {
       return new Response(
-        JSON.stringify({ error: 'Price ID is required' }),
+        JSON.stringify({ error: 'Customer ID is required' }),
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -33,41 +33,21 @@ serve(async (req) => {
       )
     }
 
-    // Create Stripe checkout session
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      mode: 'subscription',
-      success_url: `${Deno.env.get('BASE_URL')}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${Deno.env.get('BASE_URL')}/subscription/cancel`,
-      customer: customerId || undefined,
-      customer_email: !customerId ? customerEmail : undefined,
-      client_reference_id: customerId,
-      metadata: {
-        userId: customerId,
-      },
-      subscription_data: {
-        metadata: {
-          userId: customerId,
-        },
-      },
-      allow_promotion_codes: true,
+    // Create Stripe portal session
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: `${Deno.env.get('BASE_URL')}/settings`,
     })
 
     return new Response(
-      JSON.stringify({ sessionId: session.id }),
+      JSON.stringify({ url: session.url }),
       {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     )
   } catch (error) {
-    console.error('Error creating checkout session:', error)
+    console.error('Error creating portal session:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       {

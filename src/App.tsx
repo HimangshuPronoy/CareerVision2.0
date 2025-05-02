@@ -17,10 +17,12 @@ import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Settings from "./pages/Settings";
 import ResumeBuilder from "./pages/ResumeBuilder";
+import Pricing from "./pages/Pricing";
+import SubscriptionSuccess from "./pages/SubscriptionSuccess";
+import SubscriptionCancel from "./pages/SubscriptionCancel";
 import { AuthProvider } from "./contexts/AuthContext";
 import { SubscriptionProvider } from "./contexts/SubscriptionContext";
 import RouteGuard from "./components/RouteGuard";
-import SubscriptionPlans from "./pages/SubscriptionPlans";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -72,11 +74,9 @@ const App: React.FC = () => {
                     <ResumeBuilder />
                   </RouteGuard>
                 } />
-                <Route path="/subscription" element={
-                  <RouteGuard>
-                    <SubscriptionPlans />
-                  </RouteGuard>
-                } />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/subscription/success" element={<SubscriptionSuccess />} />
+                <Route path="/subscription/cancel" element={<SubscriptionCancel />} />
                 <Route path="/login" element={
                   <RouteGuard requireAuth={false}>
                     <Login />
