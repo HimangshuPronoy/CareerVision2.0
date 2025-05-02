@@ -1,136 +1,107 @@
-// @ts-ignore: Deno types are not recognized in a regular TypeScript environment
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-// @ts-ignore: Deno types are not recognized in a regular TypeScript environment
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.23.0';
-// @ts-ignore: Deno types are not recognized in a regular TypeScript environment
-import Stripe from 'https://esm.sh/stripe@12.0.0?target=deno';
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.3';
+import Stripe from 'https://esm.sh/stripe@12.19.0?target=deno';
 
-// Deno global
-declare const Deno: {
-  env: {
-    get(key: string): string | undefined;
-  };
-};
-
-// Updated CORS headers to allow requests from any origin during testing
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*', // Allow all origins for testing
+  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Max-Age': '86400',
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+  // Handle CORS preflight request
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { 
-      headers: corsHeaders,
-      status: 200
-    });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    // Get request data
-    const requestText = await req.text();
-    console.log('Raw request body:', requestText);
-    
-    let requestData;
-    try {
-      requestData = JSON.parse(requestText);
-      console.log('Parsed request data:', requestData);
-    } catch (e) {
-      console.error('Error parsing JSON:', e);
-      return new Response(
-        JSON.stringify({ error: 'Invalid JSON in request body' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
+    // Get the request body
+    const { priceId, userId } = await req.json();
+
+    // Create Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Get Stripe secret key from Supabase
+    const { data: configData, error: configError } = await supabase
+      .from('config')
+      .select('value')
+      .eq('key', 'stripe_secret_key')
+      .single();
+
+    if (configError) {
+      throw new Error(`Error fetching Stripe secret key: ${configError.message}`);
     }
-    
-    const { priceId, userId } = requestData;
-    
-    console.log('Processing checkout for:', { priceId, userId });
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    // Initialize Stripe
+    const stripe = new Stripe(configData.value, {
+      apiVersion: '2023-10-16',
+    });
 
-    // Get user data
-    console.log('Fetching user data from profiles table');
-    const { data: user, error: userError } = await supabase
+    // Get user information
+    const { data: userData, error: userError } = await supabase
       .from('profiles')
-      .select('email')
+      .select('email, full_name')
       .eq('id', userId)
       .single();
 
-    if (userError || !user?.email) {
-      console.error('User error:', userError);
-      return new Response(
-        JSON.stringify({ error: 'User not found' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
+    if (userError) {
+      throw new Error(`Error fetching user data: ${userError.message}`);
     }
 
-    console.log('Found user email:', user.email);
+    // Get application URL from config
+    const { data: appUrlData, error: appUrlError } = await supabase
+      .from('config')
+      .select('value')
+      .eq('key', 'app_url')
+      .single();
 
-    // Initialize Stripe
-    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY') ?? '';
-    console.log('Stripe key available:', !!stripeSecretKey);
-    
-    if (!stripeSecretKey) {
-      return new Response(
-        JSON.stringify({ error: 'Stripe secret key not configured' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
+    if (appUrlError) {
+      throw new Error(`Error fetching app URL: ${appUrlError.message}`);
     }
-    
-    const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2022-11-15',
+
+    const appUrl = appUrlData.value || 'http://localhost:3000';
+
+    // Create a checkout session
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      mode: 'subscription',
+      success_url: `${appUrl}/dashboard?subscription=success`,
+      cancel_url: `${appUrl}/subscription?canceled=true`,
+      customer_email: userData.email,
+      client_reference_id: userId,
+      metadata: {
+        userId: userId,
+      },
     });
 
-    // Define success and cancel URLs
-    const successUrl = Deno.env.get('PUBLIC_APP_URL') + '/payment-success?session_id={CHECKOUT_SESSION_ID}';
-    const cancelUrl = Deno.env.get('PUBLIC_APP_URL') + '/payment-cancel';
-
-    console.log('Creating checkout session with price ID:', priceId);
-    
-    // Create Stripe checkout session
-    try {
-      const session = await stripe.checkout.sessions.create({
-        customer_email: user.email,
-        line_items: [
-          {
-            price: priceId,
-            quantity: 1,
-          },
-        ],
-        mode: 'subscription',
-        success_url: successUrl,
-        cancel_url: cancelUrl,
-        metadata: {
-          userId,
-        },
-      });
-
-      console.log('Checkout session created successfully:', session.id);
-      
-      // Return the session URL
-      return new Response(
-        JSON.stringify({ url: session.url }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-      );
-    } catch (stripeError) {
-      console.error('Stripe error:', stripeError);
-      return new Response(
-        JSON.stringify({ error: stripeError.message }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
-  } catch (error) {
-    console.error('Error creating checkout session:', error);
+    // Return the session ID
     return new Response(
-      JSON.stringify({ error: (error as Error).message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      JSON.stringify({ sessionId: session.id }),
+      {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+        status: 200,
+      }
+    );
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+        status: 400,
+      }
     );
   }
 }); 

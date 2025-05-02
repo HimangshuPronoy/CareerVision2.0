@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
@@ -11,7 +10,8 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Settings as SettingsIcon, Save, Bell, Shield, Moon, Sun, LogOut } from 'lucide-react';
+import { Settings as SettingsIcon, Save, Bell, Shield, Moon, Sun, LogOut, CreditCard } from 'lucide-react';
+import ManageSubscription from '@/components/settings/ManageSubscription';
 
 const Settings = () => {
   const { user, signOut } = useAuth();
@@ -130,6 +130,7 @@ const Settings = () => {
       <Tabs defaultValue="account" className="space-y-4">
         <TabsList>
           <TabsTrigger value="account">Account</TabsTrigger>
+          <TabsTrigger value="subscription">Subscription</TabsTrigger>
           <TabsTrigger value="preferences">Preferences</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="privacy">Privacy</TabsTrigger>
@@ -191,6 +192,19 @@ const Settings = () => {
               </Button>
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        <TabsContent value="subscription">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              <h2 className="text-xl font-semibold">Subscription Management</h2>
+            </div>
+            <p className="text-muted-foreground">
+              View and manage your CareerVision subscription
+            </p>
+            <ManageSubscription />
+          </div>
         </TabsContent>
         
         <TabsContent value="preferences" className="space-y-4">

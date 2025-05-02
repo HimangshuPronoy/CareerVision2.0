@@ -17,12 +17,10 @@ import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Settings from "./pages/Settings";
 import ResumeBuilder from "./pages/ResumeBuilder";
-import Pricing from "./pages/Pricing";
-import PaymentSuccess from "./pages/PaymentSuccess";
-import PaymentCancel from "./pages/PaymentCancel";
 import { AuthProvider } from "./contexts/AuthContext";
-import { PaymentProvider } from "./contexts/PaymentContext";
+import { SubscriptionProvider } from "./contexts/SubscriptionContext";
 import RouteGuard from "./components/RouteGuard";
+import SubscriptionPlans from "./pages/SubscriptionPlans";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -33,7 +31,7 @@ const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
-          <PaymentProvider>
+          <SubscriptionProvider>
             <Toaster />
             <Sonner />
             <BrowserRouter>
@@ -74,19 +72,9 @@ const App: React.FC = () => {
                     <ResumeBuilder />
                   </RouteGuard>
                 } />
-                <Route path="/pricing" element={
+                <Route path="/subscription" element={
                   <RouteGuard>
-                    <Pricing />
-                  </RouteGuard>
-                } />
-                <Route path="/payment-success" element={
-                  <RouteGuard>
-                    <PaymentSuccess />
-                  </RouteGuard>
-                } />
-                <Route path="/payment-cancel" element={
-                  <RouteGuard>
-                    <PaymentCancel />
+                    <SubscriptionPlans />
                   </RouteGuard>
                 } />
                 <Route path="/login" element={
@@ -105,7 +93,7 @@ const App: React.FC = () => {
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
-          </PaymentProvider>
+          </SubscriptionProvider>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
