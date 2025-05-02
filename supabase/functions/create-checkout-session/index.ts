@@ -140,8 +140,9 @@ serve(async (req) => {
         },
       ],
       mode,
-      success_url: `${Deno.env.get('BASE_URL') || 'http://localhost:8081'}/subscription/success?session_id={CHECKOUT_SESSION_ID}&plan=${priceId === 'price_1RJumRJjRarA6eH84kygqd80' ? 'monthly' : 'yearly'}`,
-      cancel_url: `${Deno.env.get('BASE_URL') || 'http://localhost:8081'}/subscription/cancel`,
+      // Use absolute URLs to avoid any domain issues
+      success_url: `${Deno.env.get('BASE_URL') || 'https://careervision2-0.vercel.app'}/subscription/success?session_id={CHECKOUT_SESSION_ID}&plan=${priceId === 'price_1RJumRJjRarA6eH84kygqd80' ? 'monthly' : 'yearly'}`,
+      cancel_url: `${Deno.env.get('BASE_URL') || 'https://careervision2-0.vercel.app'}/subscription/cancel`,
       client_reference_id: customerId,
       metadata: {
         userId: customerId,
@@ -159,6 +160,14 @@ serve(async (req) => {
           message: 'Your subscription will begin immediately after payment.',
         },
       },
+      // Add phone number collection
+      phone_number_collection: {
+        enabled: false,
+      },
+      // Override locale
+      locale: 'auto',
+      // Customize colors
+      ui_mode: 'embedded',
     };
 
     // Add customer-related parameters if we have them

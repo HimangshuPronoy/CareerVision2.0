@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getStripe, PRICE_IDS, getDirectCheckoutUrl } from '@/lib/stripe';
+import { PRICE_IDS } from '@/lib/stripe';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -121,50 +121,31 @@ export const useStripeCheckout = () => {
 
       console.log('Session ID received:', data.sessionId);
 
-      // Instead of using redirectToCheckout which can cause preload errors,
-      // directly navigate to the Stripe hosted checkout page
+      // COMPLETELY BYPASS STRIPE.JS AND USE DIRECT URL
+      // Create the direct Stripe checkout URL format
       const sessionId = data.sessionId;
-      const checkoutUrl = getDirectCheckoutUrl(sessionId);
+      const checkoutUrl = `https://checkout.stripe.com/c/pay/${sessionId}`;
       
-      console.log('Redirecting directly to Stripe checkout URL:', checkoutUrl);
-      window.location.href = checkoutUrl;
+      console.log('Opening Stripe checkout directly:', checkoutUrl);
       
-      // Commented out the redirectToCheckout approach which caused preload errors
-      /*
-      // Load Stripe.js
-      const stripe = await getStripe();
+      // APPROACH 1: Open in a new window
+      const newWindow = window.open(checkoutUrl, '_blank');
       
-      if (!stripe) {
-        throw new Error('Stripe failed to initialize');
+      // Fallback if popup is blocked
+      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+        console.log('Popup was blocked, using direct navigation instead');
+        // APPROACH 2: Direct navigation if popups are blocked
+        window.location.href = checkoutUrl;
       }
-
-      console.log('Redirecting to Stripe checkout...');
       
-      try {
-        // Redirect to checkout page
-        const { error: redirectError } = await stripe.redirectToCheckout({
-          sessionId: data.sessionId,
-        });
-
-        if (redirectError) {
-          console.error('Redirect error details:', redirectError);
-          
-          // If we encounter a redirect error, use a direct URL redirect as fallback
-          if (redirectError.message?.includes('expired') || redirectError.type === 'invalid_request_error') {
-            // Direct redirect to Stripe checkout as a fallback
-            window.location.href = `https://checkout.stripe.com/pay/${data.sessionId}`;
-            return;
-          }
-          
-          throw redirectError;
-        }
-      } catch (redirectCatchError) {
-        console.error('Error during redirect:', redirectCatchError);
-        // Handle any exceptions during the redirect process
-        // Last resort fallback - direct URL
-        window.location.href = `https://checkout.stripe.com/pay/${data.sessionId}`;
-      }
-      */
+      // Success! Keep loading state until unload
+      const handleUnload = () => {
+        setLoading(false);
+        window.removeEventListener('unload', handleUnload);
+      };
+      
+      window.addEventListener('unload', handleUnload);
+      
     } catch (error) {
       console.error('Error creating checkout session:', error);
       let errorMessage = 'Failed to start checkout process. Please try again later.';
@@ -183,7 +164,7 @@ export const useStripeCheckout = () => {
         description: errorMessage,
         variant: 'destructive',
       });
-    } finally {
+      
       setLoading(false);
     }
   };
@@ -263,8 +244,17 @@ export const useStripeCheckout = () => {
 
       console.log('Portal URL received:', data.url);
 
-      // Redirect to the customer portal
-      window.location.href = data.url;
+      // Redirect to the customer portal - open in new window to avoid losing app state
+      const newWindow = window.open(data.url, '_blank');
+      
+      // Fallback if popup is blocked
+      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+        console.log('Popup was blocked, using direct navigation instead');
+        window.location.href = data.url;
+      } else {
+        // If popup worked, we can stop loading
+        setLoading(false);
+      }
     } catch (error) {
       console.error('Error creating portal session:', error);
       toast({
@@ -272,7 +262,6 @@ export const useStripeCheckout = () => {
         description: error.message || 'Failed to open customer portal. Please try again.',
         variant: 'destructive',
       });
-    } finally {
       setLoading(false);
     }
   };
