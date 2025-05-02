@@ -7,7 +7,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Loader2, ShieldCheck, CalendarClock, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useSubscription } from '@/contexts/SubscriptionContext';
-import { getUserId } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { cancelSubscription } from '@/lib/stripe';
 
 const ManageSubscription: React.FC = () => {
@@ -20,10 +20,10 @@ const ManageSubscription: React.FC = () => {
     try {
       setIsLoading(true);
       
-      // Get the subscription ID
-      const userId = await getUserId();
+      // Get the current user
+      const { data: { user } } = await supabase.auth.getUser();
       
-      if (!userId) {
+      if (!user) {
         throw new Error('User not authenticated');
       }
       
@@ -31,7 +31,7 @@ const ManageSubscription: React.FC = () => {
       const response = await fetch('/api/get-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ userId: user.id }),
       });
       
       const { subscriptionId } = await response.json();

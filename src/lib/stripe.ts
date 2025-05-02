@@ -1,5 +1,5 @@
 import { loadStripe } from '@stripe/stripe-js';
-import { supabase } from './supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 // We'll fetch the publishable key from Supabase
 let stripePromise: Promise<any> | null = null;
