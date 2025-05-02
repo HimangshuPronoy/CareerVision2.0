@@ -149,11 +149,7 @@ serve(async (req) => {
       },
       allow_promotion_codes: true,
       billing_address_collection: 'auto',
-      expires_at: Math.floor(Date.now() / 1000) + 48 * 60 * 60, // 48 hours from now (longer expiration)
-      payment_intent_data: {
-        // Help capture payment faster and reduce failures
-        setup_future_usage: 'off_session',
-      },
+      expires_at: Math.floor(Date.now() / 1000) + 23 * 60 * 60, // 23 hours from now (within Stripe's 24 hour limit)
       // Customize Stripe checkout appearance
       custom_text: {
         submit: {
@@ -166,8 +162,8 @@ serve(async (req) => {
       },
       // Override locale
       locale: 'auto',
-      // Customize colors
-      ui_mode: 'embedded',
+      // Use hosted UI mode instead of embedded to avoid client-side Stripe.js initialization problems
+      ui_mode: 'hosted',
     };
 
     // Add customer-related parameters if we have them
@@ -184,6 +180,12 @@ serve(async (req) => {
           userId: customerId,
         }
       };
+    } else if (mode === 'payment') {
+      // Only add payment_intent_data for one-time payments, not subscriptions
+      sessionParams.payment_intent_data = {
+        // Help capture payment faster and reduce failures
+        setup_future_usage: 'off_session',
+      };
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
@@ -191,7 +193,10 @@ serve(async (req) => {
     console.log(`Checkout session created: ${session.id}`);
 
     return new Response(
-      JSON.stringify({ sessionId: session.id }),
+      JSON.stringify({ 
+        sessionId: session.id,
+        url: session.url
+      }),
       {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

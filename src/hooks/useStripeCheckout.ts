@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { PRICE_IDS } from '@/lib/stripe';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { getCheckoutUrl } from '@/integrations/stripe/client';
 
 const SUPABASE_URL = "https://lxnmvvldfjmpoqsdhaug.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4bm12dmxkZmptcG9xc2RoYXVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMxNTI0ODIsImV4cCI6MjA1ODcyODQ4Mn0.sUx3Ee_1NFtyjlzorybqkka-nEyjqpzImh4kEfPbsAE";
 
-// Flag to use mock data (set to true to bypass Stripe/Supabase and use local testing mode)
-// IMPORTANT: If you're experiencing issues with Stripe integration, set this to 'true'
-// to test the UI flow without actual API calls.
+// Flag to use mock data (set to false to use the real Stripe integration)
+// IMPORTANT: Set to true only for testing if Stripe integration issues persist
 const USE_MOCK_DATA = false;
 
 export const useStripeCheckout = () => {
@@ -119,32 +119,33 @@ export const useStripeCheckout = () => {
         throw new Error('No session ID returned from server');
       }
 
-      console.log('Session ID received:', data.sessionId);
+      // Log the entire checkout session data for debugging
+      console.log('Checkout session data:', data);
 
-      // COMPLETELY BYPASS STRIPE.JS AND USE DIRECT URL
-      // Create the direct Stripe checkout URL format
-      const sessionId = data.sessionId;
-      const checkoutUrl = `https://checkout.stripe.com/c/pay/${sessionId}`;
-      
-      console.log('Opening Stripe checkout directly:', checkoutUrl);
-      
-      // APPROACH 1: Open in a new window
-      const newWindow = window.open(checkoutUrl, '_blank');
-      
-      // Fallback if popup is blocked
-      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-        console.log('Popup was blocked, using direct navigation instead');
-        // APPROACH 2: Direct navigation if popups are blocked
-        window.location.href = checkoutUrl;
+      // Try to use the URL directly from response if available
+      let checkoutUrl;
+      if (data.url) {
+        console.log('Using URL from response:', data.url);
+        checkoutUrl = data.url;
+      } else {
+        console.log('Creating checkout URL from session ID:', data.sessionId);
+        checkoutUrl = getCheckoutUrl(data.sessionId);
       }
       
-      // Success! Keep loading state until unload
-      const handleUnload = () => {
-        setLoading(false);
-        window.removeEventListener('unload', handleUnload);
-      };
+      console.log('Opening Stripe checkout URL:', checkoutUrl);
       
-      window.addEventListener('unload', handleUnload);
+      // For debugging - show the URL before redirecting
+      toast({
+        title: "Opening Stripe checkout",
+        description: "You'll be redirected to Stripe to complete payment.",
+      });
+      
+      // Add a small delay before redirecting to make sure we see the logs
+      setTimeout(() => {
+        window.location.href = checkoutUrl;
+      }, 500);
+      
+      return; // Keep loading state for the redirect
       
     } catch (error) {
       console.error('Error creating checkout session:', error);

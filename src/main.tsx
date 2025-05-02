@@ -1,6 +1,4 @@
 import { createRoot } from 'react-dom/client'
-import { Elements } from '@stripe/react-stripe-js';
-import { stripePromise } from './integrations/stripe/client';
 import App from './App.tsx'
 import './index.css'
 
@@ -14,8 +12,4 @@ if (!container) throw new Error("Root element not found!");
 const root = createRoot(container);
 
 // Render the app
-root.render(
-  <Elements stripe={stripePromise}>
-    <App />
-  </Elements>
-);
+root.render(<App />);
