@@ -1,11 +1,13 @@
 // This file is for testing Stripe price IDs
 // Run with Node.js:
-// 1. Add your Stripe secret key below
+// 1. Add your Stripe secret key below (this is different from your publishable key)
 // 2. Run: node test-stripe.js
 
+// Your publishable key: pk_live_51RIzYUJjRarA6eH81NR6FNjH0BCkFBoM13yCsXlKrfb1J32ZPpSYJmKt8XV8P1brI51ismmIPZ1Ggr4zeku0f8Vz00ziC9Fplm
+// Add your SECRET key below (starts with sk_live_...)
 const stripe = require('stripe')('sk_YOUR_STRIPE_SECRET_KEY');
 
-// These are the IDs we're using in the app
+// These are the IDs we're using in the app - let's check if they're valid
 const priceIds = {
   MONTHLY: 'price_1RJumRJjRarA6eH84kygqd80',
   ANNUAL: 'price_1RJumvJjRarA6eH8KTvJCoGL'
