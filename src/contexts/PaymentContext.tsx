@@ -9,22 +9,27 @@ const SUPABASE_URL = "https://lxnmvvldfjmpoqsdhaug.supabase.co";
 const CREATE_CHECKOUT_SESSION_URL = `${SUPABASE_URL}/functions/v1/swift-task`;
 const SUBSCRIPTION_STATUS_URL = `${SUPABASE_URL}/functions/v1/bright-handler`;
 const STRIPE_WEBHOOK_URL = `${SUPABASE_URL}/functions/v1/swift-action`;
+// Add portal URL with the expected slug pattern (this will need to be updated with the real slug)
+const CREATE_PORTAL_SESSION_URL = `${SUPABASE_URL}/functions/v1/gentle-lamp`;
 
 // Debug info
 console.log('Payment service URLs:', {
   checkout: CREATE_CHECKOUT_SESSION_URL,
   status: SUBSCRIPTION_STATUS_URL,
-  webhook: STRIPE_WEBHOOK_URL
+  webhook: STRIPE_WEBHOOK_URL,
+  portal: CREATE_PORTAL_SESSION_URL
 });
 
-interface PaymentContextType {
+// Payment context type
+type PaymentContextType = {
   isSubscribed: boolean;
   subscriptionPlan: string | null;
   isLoading: boolean;
   error: string | null;
-  createCheckoutSession: (priceId: string) => Promise<{ url: string | null; error: Error | null }>;
+  createCheckoutSession: (priceId: string) => Promise<{ url: string | null; error: string | null }>;
   checkSubscriptionStatus: () => Promise<void>;
-}
+  redirectToCustomerPortal: () => Promise<void>;
+};
 
 const PaymentContext = createContext<PaymentContextType | undefined>(undefined);
 
@@ -82,50 +87,93 @@ export function PaymentProvider({ children }: { children: ReactNode }) {
         }
 
         return { url: data.url, error: null };
-      } catch (fetchError) {
-        console.error('Fetch error in createCheckoutSession:', fetchError);
-        // In development, redirect to a mock success page
-        if (process.env.NODE_ENV !== 'production') {
-          console.log('Development mode: returning mock checkout session URL');
-          return { 
-            url: `${window.location.origin}/payment-success`, 
-            error: null 
-          };
-        }
-        throw fetchError;
+      } catch (error) {
+        console.error('Error creating checkout session:', error);
+        throw error;
       }
     } catch (error) {
-      console.error('Error creating checkout session:', error);
-      return { url: null, error: error as Error };
+      console.error('Error in checkout flow:', error);
+      setError(error instanceof Error ? error.message : 'Unknown error');
+      return { url: null, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   };
 
-  // Check the user's subscription status
+  // Redirect to Stripe Customer Portal
+  const redirectToCustomerPortal = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('User must be logged in to access customer portal');
+      }
+      
+      const session = await supabase.auth.getSession();
+      
+      console.log('Redirecting to customer portal for user:', user.id);
+      
+      // Call the Edge Function to create a portal session
+      const response = await fetch(CREATE_PORTAL_SESSION_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.data.session?.access_token}`,
+        },
+        body: JSON.stringify({
+          userId: user.id,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response from portal session:', errorText);
+        throw new Error(`Failed to create portal session: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('Portal session created:', data);
+      
+      if (data.error) {
+        throw new Error(data.error.message || 'Unknown error creating portal session');
+      }
+
+      // Redirect to the Stripe Customer Portal
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error('Error redirecting to customer portal:', error);
+      setError(error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Check if user has an active subscription
   const checkSubscriptionStatus = async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      const { data: { session } } = await supabase.auth.getSession();
+      const session = await supabase.auth.getSession();
       
-      if (!session?.user) {
-        console.log('No user session found, setting subscription status to false');
+      if (!session.data.session?.user) {
+        console.log('No authenticated user found');
         setIsSubscribed(false);
         setSubscriptionPlan(null);
-        setIsLoading(false);
         return;
       }
-
-      console.log('Checking subscription status for user:', session.user.id);
       
       try {
         // First attempt with URL from constant
-        console.log('Calling subscription status endpoint:', `${SUBSCRIPTION_STATUS_URL}?userId=${session.user.id}`);
-        console.log('Headers:', { Authorization: `Bearer ${session.access_token}` });
+        console.log('Calling subscription status endpoint:', `${SUBSCRIPTION_STATUS_URL}?userId=${session.data.session.user.id}`);
+        console.log('Headers:', { Authorization: `Bearer ${session.data.session.access_token}` });
         
-        const response = await fetch(`${SUBSCRIPTION_STATUS_URL}?userId=${session.user.id}`, {
+        const response = await fetch(`${SUBSCRIPTION_STATUS_URL}?userId=${session.data.session.user.id}`, {
           headers: {
-            'Authorization': `Bearer ${session.access_token}`,
+            'Authorization': `Bearer ${session.data.session.access_token}`,
           },
           // Remove timeout as it might cause issues
           // signal: AbortSignal.timeout(5000)
@@ -149,66 +197,34 @@ export function PaymentProvider({ children }: { children: ReactNode }) {
 
         setIsSubscribed(data.isActive || false);
         setSubscriptionPlan(data.plan || null);
-      } catch (fetchError) {
-        console.error('Error fetching subscription status:', fetchError);
-        
-        // Try direct URL if constant URL fails
-        try {
-          console.log('Trying direct URL as fallback...');
-          const directUrl = `https://lxnmvvldfjmpoqsdhaug.supabase.co/functions/v1/bright-handler?userId=${session.user.id}`;
-          console.log('Direct URL:', directUrl);
-          
-          const fallbackResponse = await fetch(directUrl, {
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`,
-            },
-          });
-          
-          console.log('Fallback response received:', fallbackResponse.status, fallbackResponse.statusText);
-          
-          if (fallbackResponse.ok) {
-            const fallbackData = await fallbackResponse.json();
-            console.log('Fallback data:', fallbackData);
-            setIsSubscribed(fallbackData.isActive || false);
-            setSubscriptionPlan(fallbackData.plan || null);
-            return;
-          }
-        } catch (fallbackError) {
-          console.error('Fallback also failed:', fallbackError);
-        }
-        
-        // For development/testing, we'll set a default state and continue
-        // In production, you might want to handle this differently
-        setError('Could not connect to subscription service. Using default settings.');
-        setIsSubscribed(false);
-        setSubscriptionPlan(null);
+      } catch (error) {
+        console.error('Error checking subscription status:', error);
+        setError(error instanceof Error ? error.message : 'Unknown error');
+      } finally {
+        setIsLoading(false);
       }
     } catch (error) {
-      console.error('Error in checkSubscriptionStatus:', error);
-      setIsSubscribed(false);
-      setSubscriptionPlan(null);
-      setError('Failed to check subscription status');
-    } finally {
+      console.error('Error in subscription status flow:', error);
       setIsLoading(false);
+      setError(error instanceof Error ? error.message : 'Unknown error');
     }
   };
 
-  // Check subscription status when the component mounts
+  // Check subscription status on mount
   useEffect(() => {
     checkSubscriptionStatus();
   }, []);
 
-  const value = {
-    isSubscribed,
-    subscriptionPlan,
-    isLoading,
-    error,
-    createCheckoutSession,
-    checkSubscriptionStatus,
-  };
-
   return (
-    <PaymentContext.Provider value={value}>
+    <PaymentContext.Provider value={{ 
+      isSubscribed, 
+      subscriptionPlan, 
+      isLoading, 
+      error,
+      createCheckoutSession,
+      checkSubscriptionStatus,
+      redirectToCustomerPortal
+    }}>
       <Elements stripe={stripePromise}>
         {children}
       </Elements>

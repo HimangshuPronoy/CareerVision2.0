@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
@@ -9,6 +8,7 @@ import CareerPathCard from '@/components/dashboard/CareerPathCard';
 import RecommendedSkills from '@/components/dashboard/RecommendedSkills';
 import IndustryTrendsCard from '@/components/dashboard/IndustryTrendsCard';
 import AIInsights from '@/components/dashboard/AIInsights';
+import { ManageSubscription } from '@/components/subscription/ManageSubscription';
 import { Award, TrendingUp, BarChart2, GraduationCap } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -248,18 +248,37 @@ const Dashboard = () => {
           value={`${industryGrowthRate}%`} 
           change={2.1} 
           icon={<BarChart2 className="h-5 w-5 text-careervision-500" />} 
-          description={userProfile?.industry || "Technology"} 
+          description="Year-over-year industry growth"
         />
         <StatsCard 
           title="Learning Progress" 
           value={learningProgress.toString()} 
+          change={1} 
           icon={<GraduationCap className="h-5 w-5 text-insight-500" />} 
-          description="Skills acquired or in progress"
+          description="Skills and resources completed"
         />
       </div>
       
-      <div className="mb-6">
-        <AIInsights />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="md:col-span-2">
+          <AIInsights 
+            loading={loading} 
+            careerPaths={careerPaths}
+            recommendedSkills={recommendedSkills}
+          />
+        </div>
+        <div>
+          <ManageSubscription />
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div>
+          <CareerPathCard paths={careerPaths} loading={loading} />
+        </div>
+        <div>
+          <RecommendedSkills skills={recommendedSkills} loading={loading} />
+        </div>
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
