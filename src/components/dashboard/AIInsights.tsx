@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,17 +5,28 @@ import { useAIInsights } from '@/hooks/useAIInsights';
 import { Lightbulb, RefreshCw, Search } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import { Input } from '@/components/ui/input';
 
-const AIInsights = () => {
-  const { getCareerPaths, getSpecificCareerPath, getUserProfile, loading, error } = useAIInsights();
+interface AIInsightsProps {
+  loading?: boolean;
+  careerPaths?: any[];
+  recommendedSkills?: any[];
+}
+
+const AIInsights: React.FC<AIInsightsProps> = ({ 
+  loading: externalLoading, 
+  careerPaths = [], 
+  recommendedSkills = [] 
+}) => {
+  const { getCareerPaths, getSpecificCareerPath, getUserProfile, loading: apiLoading, error } = useAIInsights();
   const { user } = useAuth();
   const [insight, setInsight] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [jobInput, setJobInput] = useState('');
   const [showJobInput, setShowJobInput] = useState(false);
 
+  // Use either externally provided paths or generate new ones
   const generateInsight = async (specificJob?: string) => {
     if (!user) {
       toast({
@@ -29,36 +39,43 @@ const AIInsights = () => {
     
     setIsLoading(true);
     try {
-      // Try to get user profile from database first
-      let userProfile = await getUserProfile();
-      console.log("Retrieved user profile for insights:", userProfile);
-      
-      // Fall back to mock profile if user profile is empty or incomplete
-      if (!userProfile || !userProfile.skills || userProfile.skills.length === 0) {
-        console.log("Using fallback data for insights - user needs to complete profile");
-        setInsight("Please complete your profile with skills and experience to get personalized insights. Go to the Profile page to add your information.");
-        setIsLoading(false);
-        return;
-      }
-      
-      if (specificJob) {
-        // Get insight for specific job
-        const jobInsight = await getSpecificCareerPath(userProfile, specificJob);
-        if (jobInsight) {
-          setInsight(`For a ${jobInsight.title} role, you have a ${jobInsight.matchPercentage}% match. ${jobInsight.description} To improve your chances, focus on developing these skills: ${jobInsight.requiredSkills?.join(', ')}.`);
-        } else {
-          setInsight(`We couldn't generate insights for a ${specificJob} role. Please try another job title.`);
-        }
+      // Use the career paths passed as props if available
+      if (careerPaths.length > 0 && !specificJob) {
+        // Pick a random path from the provided array
+        const randomPath = careerPaths[Math.floor(Math.random() * careerPaths.length)];
+        setInsight(`Based on your profile, you have a ${randomPath.matchPercentage}% match for a ${randomPath.title} role. ${randomPath.description}`);
       } else {
-        // Get general career path insights
-        const paths = await getCareerPaths(userProfile);
-        if (paths && paths.length > 0) {
-          // Pick a random path from the returned array
-          const randomPath = paths[Math.floor(Math.random() * paths.length)];
-          setInsight(`Based on your profile, you have a ${randomPath.matchPercentage}% match for a ${randomPath.title} role. ${randomPath.description}`);
+        // Get user profile from database
+        let userProfile = await getUserProfile();
+        console.log("Retrieved user profile for insights:", userProfile);
+        
+        // Fall back to mock profile if user profile is empty or incomplete
+        if (!userProfile || !userProfile.skills || userProfile.skills.length === 0) {
+          console.log("Using fallback data for insights - user needs to complete profile");
+          setInsight("Please complete your profile with skills and experience to get personalized insights. Go to the Profile page to add your information.");
+          setIsLoading(false);
+          return;
+        }
+        
+        if (specificJob) {
+          // Get insight for specific job
+          const jobInsight = await getSpecificCareerPath(userProfile, specificJob);
+          if (jobInsight) {
+            setInsight(`For a ${jobInsight.title} role, you have a ${jobInsight.matchPercentage}% match. ${jobInsight.description} To improve your chances, focus on developing these skills: ${jobInsight.requiredSkills?.join(', ')}.`);
+          } else {
+            setInsight(`We couldn't generate insights for a ${specificJob} role. Please try another job title.`);
+          }
         } else {
-          console.log("No career paths returned from API");
-          setInsight("We couldn't generate career insights at this time. Please update your profile with more information about your skills and experience.");
+          // Get general career path insights
+          const paths = await getCareerPaths(userProfile);
+          if (paths && paths.length > 0) {
+            // Pick a random path from the returned array
+            const randomPath = paths[Math.floor(Math.random() * paths.length)];
+            setInsight(`Based on your profile, you have a ${randomPath.matchPercentage}% match for a ${randomPath.title} role. ${randomPath.description}`);
+          } else {
+            console.log("No career paths returned from API");
+            setInsight("We couldn't generate career insights at this time. Please update your profile with more information about your skills and experience.");
+          }
         }
       }
     } catch (err) {
