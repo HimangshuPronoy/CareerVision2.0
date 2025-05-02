@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { PRICE_IDS } from '@/lib/stripe';
 import { usePayment } from '@/contexts/PaymentContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PlanFeature {
   text: string;
@@ -72,20 +73,33 @@ export function PricingPlans() {
       return;
     }
 
+    console.log(`Subscribing to plan: ${planId} with priceId: ${priceId}`);
+    
     try {
       setLoading(planId);
+      
+      // Log the user's authentication status
+      const { data } = await supabase.auth.getUser();
+      console.log('User authenticated:', !!data.user);
+      
       const { url, error } = await createCheckoutSession(priceId);
       
       if (error) {
-        console.error('Error creating checkout session:', error);
+        console.error(`Error creating checkout session for ${planId}:`, error);
+        alert(`Subscription error: ${error}`);
         return;
       }
       
       if (url) {
+        console.log('Redirecting to checkout URL:', url);
         window.location.href = url;
+      } else {
+        console.error('No URL returned from checkout session');
+        alert('Failed to create checkout session: No URL returned');
       }
     } catch (error) {
-      console.error('Error subscribing:', error);
+      console.error('Subscription error:', error);
+      alert(`Subscription error: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setLoading(null);
     }
