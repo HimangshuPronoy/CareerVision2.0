@@ -9,8 +9,8 @@ const SUPABASE_URL = "https://lxnmvvldfjmpoqsdhaug.supabase.co";
 const CREATE_CHECKOUT_SESSION_URL = `${SUPABASE_URL}/functions/v1/swift-task`;
 const SUBSCRIPTION_STATUS_URL = `${SUPABASE_URL}/functions/v1/bright-handler`;
 const STRIPE_WEBHOOK_URL = `${SUPABASE_URL}/functions/v1/swift-action`;
-// Add portal URL with the expected slug pattern (this will need to be updated with the real slug)
-const CREATE_PORTAL_SESSION_URL = `${SUPABASE_URL}/functions/v1/gentle-lamp`;
+// Update with the correct slug from the function list
+const CREATE_PORTAL_SESSION_URL = `${SUPABASE_URL}/functions/v1/-create-portal-session`;
 
 // Debug info
 console.log('Payment service URLs:', {
