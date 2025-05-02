@@ -7,7 +7,7 @@ const SUPABASE_URL = "https://lxnmvvldfjmpoqsdhaug.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4bm12dmxkZmptcG9xc2RoYXVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMxNTI0ODIsImV4cCI6MjA1ODcyODQ4Mn0.sUx3Ee_1NFtyjlzorybqkka-nEyjqpzImh4kEfPbsAE";
 
 // Flag to use mock data (set to true for testing without actual Stripe/Supabase)
-const USE_MOCK_DATA = true;
+const USE_MOCK_DATA = false;
 
 interface SubscriptionStatus {
   isActive: boolean;
