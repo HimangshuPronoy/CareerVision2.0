@@ -20,6 +20,7 @@ export const getStripe = async () => {
     // Add options parameter to fix localization issues
     const options = {
       locale: 'auto' as const, // Type assertion to fix type issue
+      loader: 'always' as const, // Always load fresh to avoid caching issues
     };
     
     try {
@@ -43,6 +44,11 @@ export const getStripe = async () => {
     stripePromise = null;
     return null;
   }
+};
+
+// Helper function to generate direct checkout URL (bypassing redirectToCheckout)
+export const getDirectCheckoutUrl = (sessionId: string) => {
+  return `https://checkout.stripe.com/c/pay/${sessionId}`;
 };
 
 // Constants for subscription plans

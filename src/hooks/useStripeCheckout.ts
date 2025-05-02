@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { getStripe, PRICE_IDS } from '@/lib/stripe';
+import { getStripe, PRICE_IDS, getDirectCheckoutUrl } from '@/lib/stripe';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
 const SUPABASE_URL = "https://lxnmvvldfjmpoqsdhaug.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4bm12dmxkZmptcG9xc2RoYXVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMxNTI0ODIsImV4cCI6MjA1ODcyODQ4Mn0.sUx3Ee_1NFtyjlzorybqkka-nEyjqpzImh4kEfPbsAE";
 
-// Flag to use mock data (set to true for testing without actual Stripe/Supabase)
+// Flag to use mock data (set to true to bypass Stripe/Supabase and use local testing mode)
+// IMPORTANT: If you're experiencing issues with Stripe integration, set this to 'true'
+// to test the UI flow without actual API calls.
 const USE_MOCK_DATA = false;
 
 export const useStripeCheckout = () => {
@@ -119,6 +121,16 @@ export const useStripeCheckout = () => {
 
       console.log('Session ID received:', data.sessionId);
 
+      // Instead of using redirectToCheckout which can cause preload errors,
+      // directly navigate to the Stripe hosted checkout page
+      const sessionId = data.sessionId;
+      const checkoutUrl = getDirectCheckoutUrl(sessionId);
+      
+      console.log('Redirecting directly to Stripe checkout URL:', checkoutUrl);
+      window.location.href = checkoutUrl;
+      
+      // Commented out the redirectToCheckout approach which caused preload errors
+      /*
       // Load Stripe.js
       const stripe = await getStripe();
       
@@ -128,15 +140,31 @@ export const useStripeCheckout = () => {
 
       console.log('Redirecting to Stripe checkout...');
       
-      // Redirect to checkout page
-      const { error: redirectError } = await stripe.redirectToCheckout({
-        sessionId: data.sessionId,
-      });
+      try {
+        // Redirect to checkout page
+        const { error: redirectError } = await stripe.redirectToCheckout({
+          sessionId: data.sessionId,
+        });
 
-      if (redirectError) {
-        console.error('Redirect error details:', redirectError);
-        throw redirectError;
+        if (redirectError) {
+          console.error('Redirect error details:', redirectError);
+          
+          // If we encounter a redirect error, use a direct URL redirect as fallback
+          if (redirectError.message?.includes('expired') || redirectError.type === 'invalid_request_error') {
+            // Direct redirect to Stripe checkout as a fallback
+            window.location.href = `https://checkout.stripe.com/pay/${data.sessionId}`;
+            return;
+          }
+          
+          throw redirectError;
+        }
+      } catch (redirectCatchError) {
+        console.error('Error during redirect:', redirectCatchError);
+        // Handle any exceptions during the redirect process
+        // Last resort fallback - direct URL
+        window.location.href = `https://checkout.stripe.com/pay/${data.sessionId}`;
       }
+      */
     } catch (error) {
       console.error('Error creating checkout session:', error);
       let errorMessage = 'Failed to start checkout process. Please try again later.';

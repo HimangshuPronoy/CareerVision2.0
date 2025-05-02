@@ -6,7 +6,9 @@ import { useToast } from '@/hooks/use-toast';
 const SUPABASE_URL = "https://lxnmvvldfjmpoqsdhaug.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4bm12dmxkZmptcG9xc2RoYXVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMxNTI0ODIsImV4cCI6MjA1ODcyODQ4Mn0.sUx3Ee_1NFtyjlzorybqkka-nEyjqpzImh4kEfPbsAE";
 
-// Flag to use mock data (set to true for testing without actual Stripe/Supabase)
+// Flag to use mock data (set to true to bypass Stripe/Supabase and use local testing mode)
+// IMPORTANT: If you're experiencing issues with Stripe integration, set this to 'true'
+// to test the UI flow without actual API calls.
 const USE_MOCK_DATA = false;
 
 interface SubscriptionStatus {
@@ -97,6 +99,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
 
     try {
+      console.log(`Fetching subscription for user: ${user.id}`);
+      
       // Call the Supabase function directly with fetch
       const response = await fetch(
         `${SUPABASE_URL}/functions/v1/get-subscription-status`,
@@ -112,14 +116,27 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
       );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to get subscription status');
+      console.log('Response status:', response.status);
+      
+      // Get the full response text for debugging
+      const responseText = await response.text();
+      console.log('Response body:', responseText);
+      
+      let data;
+      try {
+        // Try to parse as JSON if possible
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Error parsing response as JSON:', parseError);
+        throw new Error(`Invalid response format: ${responseText}`);
       }
 
-      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || `Request failed with status ${response.status}`);
+      }
 
       if (data && data.subscription) {
+        console.log('Subscription data received:', data.subscription);
         setSubscription({
           isActive: data.subscription.isActive,
           plan: data.subscription.plan,
@@ -127,6 +144,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
           loading: false,
         });
       } else {
+        console.log('No active subscription found');
         setSubscription({
           isActive: false,
           plan: null,
@@ -138,7 +156,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       console.error('Error fetching subscription:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load subscription information.',
+        description: error.message || 'Failed to load subscription information.',
         variant: 'destructive',
       });
       setSubscription({

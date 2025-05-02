@@ -148,6 +148,17 @@ serve(async (req) => {
       },
       allow_promotion_codes: true,
       billing_address_collection: 'auto',
+      expires_at: Math.floor(Date.now() / 1000) + 48 * 60 * 60, // 48 hours from now (longer expiration)
+      payment_intent_data: {
+        // Help capture payment faster and reduce failures
+        setup_future_usage: 'off_session',
+      },
+      // Customize Stripe checkout appearance
+      custom_text: {
+        submit: {
+          message: 'Your subscription will begin immediately after payment.',
+        },
+      },
     };
 
     // Add customer-related parameters if we have them
