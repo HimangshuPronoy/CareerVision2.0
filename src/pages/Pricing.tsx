@@ -1,161 +1,207 @@
-import { useState, useEffect } from 'react';
-import { PricingPlans } from '@/components/pricing/PricingPlans';
-import { usePayment } from '@/contexts/PaymentContext';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import MainLayout from '@/components/layouts/MainLayout';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2, CheckCircle, X } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { fetchPricingPlans, createCheckoutSession, StripePrice } from '@/integrations/stripe/api';
+import { getStripe } from '@/integrations/stripe/client';
+import { Badge } from '@/components/ui/badge';
 
-// Function to directly test the Supabase function
-async function testSupabaseFunction() {
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      console.error('No active session found');
-      return;
-    }
-
-    const SUPABASE_URL = "https://lxnmvvldfjmpoqsdhaug.supabase.co";
-    
-    console.log('Testing Supabase function...');
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/bright-handler?userId=${session.user.id}`, {
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-      }
-    });
-    
-    console.log('Response status:', response.status);
-    const responseBody = await response.text();
-    console.log('Response body:', responseBody);
-    
-    try {
-      const jsonData = JSON.parse(responseBody);
-      console.log('Parsed JSON:', jsonData);
-    } catch (e) {
-      console.error('Failed to parse response as JSON:', e);
-    }
-  } catch (error) {
-    console.error('Test failed:', error);
-  }
-}
-
-export default function Pricing() {
-  const { checkSubscriptionStatus, isLoading, error: paymentError } = usePayment();
-  const [pageLoading, setPageLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const Pricing = () => {
+  const [plans, setPlans] = useState<StripePrice[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const checkoutStatus = searchParams.get('checkout');
 
   useEffect(() => {
-    const loadData = async () => {
+    const loadPlans = async () => {
       try {
-        console.log('Checking subscription status...');
-        await checkSubscriptionStatus();
-        console.log('Subscription status checked successfully');
-      } catch (err) {
-        console.error('Error checking subscription status:', err);
-        setError('Failed to load subscription data');
+        const pricingPlans = await fetchPricingPlans();
+        setPlans(pricingPlans);
+      } catch (error) {
+        console.error('Failed to load pricing plans:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load pricing plans. Please try again later.',
+          variant: 'destructive',
+        });
       } finally {
-        setPageLoading(false);
+        setLoading(false);
       }
     };
 
-    // Set a timeout to ensure we don't wait forever
-    const timeoutId = setTimeout(() => {
-      setPageLoading(false);
-    }, 5000);
+    loadPlans();
 
-    loadData();
+    // Show toast based on checkout status
+    if (checkoutStatus === 'cancelled') {
+      toast({
+        title: 'Checkout Cancelled',
+        description: 'Your checkout process was cancelled. No charges were made.',
+      });
+    }
+  }, [toast, checkoutStatus]);
 
-    return () => clearTimeout(timeoutId);
-  }, [checkSubscriptionStatus]);
+  const handleSubscribe = async (priceId: string) => {
+    if (!user) {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please log in to subscribe to a plan.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-  if (pageLoading && isLoading) {
-    return (
-      <div className="container mx-auto py-16 flex items-center justify-center flex-col">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-        <p>Loading pricing information...</p>
-        <div className="flex gap-2 mt-4">
-          <Button 
-            variant="outline"
-            onClick={() => {
-              setPageLoading(false);
-              testSupabaseFunction();
-            }}
-          >
-            Skip Loading &amp; Debug
-          </Button>
-          <Button 
-            variant="default"
-            onClick={() => {
-              setPageLoading(false);
-              setError("Forced display of pricing plans");
-            }}
-          >
-            Show Pricing Plans Anyway
-          </Button>
-        </div>
-      </div>
-    );
-  }
+    try {
+      setCheckoutLoading(priceId);
+      const sessionId = await createCheckoutSession(priceId, user.id);
+      const stripe = await getStripe();
+      
+      if (stripe) {
+        await stripe.redirectToCheckout({ sessionId });
+      }
+    } catch (error: any) {
+      console.error('Error starting checkout:', error);
+      toast({
+        title: 'Checkout Error',
+        description: error.message || 'Something went wrong. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setCheckoutLoading(null);
+    }
+  };
 
-  return (
-    <div className="container mx-auto py-16 px-4 sm:px-6 lg:px-8">
-      {(error || paymentError) && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Connection Error</AlertTitle>
-          <AlertDescription>
-            {error || paymentError}
-            {" "}You can still view pricing information, but some features may be limited.
-          </AlertDescription>
-        </Alert>
+  const PlanFeature = ({ included, text }: { included: boolean; text: string }) => (
+    <div className="flex items-center gap-2">
+      {included ? (
+        <CheckCircle className="h-5 w-5 text-green-500" />
+      ) : (
+        <X className="h-5 w-5 text-red-500" />
       )}
-
-      <div className="max-w-4xl mx-auto text-center">
-        <h2 className="text-3xl font-extrabold sm:text-4xl">
-          Pricing Plans
-        </h2>
-        <p className="mt-3 text-xl text-muted-foreground max-w-2xl mx-auto">
-          Choose the plan that best fits your career goals
-        </p>
-      </div>
-      
-      <div className="mt-12">
-        <PricingPlans />
-      </div>
-      
-      <div className="mt-16 max-w-2xl mx-auto text-center">
-        <h3 className="text-lg font-medium">
-          Frequently Asked Questions
-        </h3>
-        <div className="mt-6">
-          <div className="space-y-8">
-            <div>
-              <h4 className="text-base font-semibold">Can I cancel my subscription at any time?</h4>
-              <p className="mt-2 text-muted-foreground">
-                Yes, you can cancel your subscription at any time. Your benefits will continue until the end of your billing period.
-              </p>
-            </div>
-            <div>
-              <h4 className="text-base font-semibold">Is there a free trial?</h4>
-              <p className="mt-2 text-muted-foreground">
-                We don't currently offer a free trial, but we do offer a Basic plan with essential features to get you started.
-              </p>
-            </div>
-            <div>
-              <h4 className="text-base font-semibold">Can I switch between plans?</h4>
-              <p className="mt-2 text-muted-foreground">
-                Yes, you can upgrade or downgrade your plan at any time. Changes to your plan will take effect immediately.
-              </p>
-            </div>
-            <div>
-              <h4 className="text-base font-semibold">How secure is my payment information?</h4>
-              <p className="mt-2 text-muted-foreground">
-                All payments are processed securely through Stripe. We never store your credit card information on our servers.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <span className={included ? 'text-foreground' : 'text-muted-foreground'}>{text}</span>
     </div>
   );
-} 
+
+  return (
+    <MainLayout>
+      <div className="container px-4 py-12 md:py-24 max-w-7xl mx-auto">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold mb-4">Choose Your Plan</h1>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Select the perfect plan for your career journey. Upgrade anytime as your needs grow.
+          </p>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="ml-2">Loading pricing plans...</span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Free Plan */}
+            <Card className="flex flex-col h-full border-2 border-muted hover:border-primary/50 transition-colors">
+              <CardHeader>
+                <CardTitle className="flex flex-col gap-2">
+                  Free
+                  <Badge variant="outline" className="self-start">
+                    Limited Access
+                  </Badge>
+                </CardTitle>
+                <CardDescription>Get started with basic features</CardDescription>
+                <div className="mt-4">
+                  <span className="text-4xl font-bold">$0</span>
+                  <span className="text-muted-foreground">/forever</span>
+                </div>
+              </CardHeader>
+              <CardContent className="flex-grow">
+                <div className="space-y-4">
+                  <PlanFeature included={true} text="Basic career insights" />
+                  <PlanFeature included={true} text="Limited dashboard access" />
+                  <PlanFeature included={true} text="Resume builder (basic)" />
+                  <PlanFeature included={false} text="Advanced skill analysis" />
+                  <PlanFeature included={false} text="Market trend reports" />
+                  <PlanFeature included={false} text="Personalized career paths" />
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button variant="outline" className="w-full" disabled={true}>
+                  Current Plan
+                </Button>
+              </CardFooter>
+            </Card>
+
+            {/* Subscription Plans */}
+            {plans.map((plan) => (
+              <Card 
+                key={plan.id} 
+                className={`flex flex-col h-full ${
+                  plan.interval === 'year'
+                    ? 'border-2 border-primary shadow-lg relative' 
+                    : 'border-2 border-muted hover:border-primary/50 transition-colors'
+                }`}
+              >
+                {plan.interval === 'year' && (
+                  <div className="absolute top-0 right-0 transform translate-x-2 -translate-y-2">
+                    <Badge className="bg-primary text-primary-foreground">Popular</Badge>
+                  </div>
+                )}
+                <CardHeader>
+                  <CardTitle>{plan.name}</CardTitle>
+                  <CardDescription>{plan.description}</CardDescription>
+                  <div className="mt-4">
+                    <span className="text-4xl font-bold">
+                      ${(plan.unit_amount / 100).toFixed(2)}
+                    </span>
+                    <span className="text-muted-foreground">
+                      /{plan.interval}
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <div className="space-y-4">
+                    {plan.features?.map((feature, index) => (
+                      <PlanFeature key={index} included={true} text={feature} />
+                    ))}
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button 
+                    className="w-full" 
+                    onClick={() => handleSubscribe(plan.id)}
+                    disabled={checkoutLoading === plan.id}
+                  >
+                    {checkoutLoading === plan.id ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      'Subscribe'
+                    )}
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
+        
+        <div className="mt-16 text-center max-w-2xl mx-auto">
+          <h2 className="text-2xl font-bold mb-4">Money-Back Guarantee</h2>
+          <p className="text-muted-foreground">
+            All paid plans come with a 14-day money-back guarantee. If you're not satisfied, 
+            we'll refund your payment. No questions asked.
+          </p>
+        </div>
+      </div>
+    </MainLayout>
+  );
+};
+
+export default Pricing; 
