@@ -16,7 +16,22 @@ export default function SubscriptionSuccess() {
   useEffect(() => {
     // Refresh subscription status when this page loads
     refreshSubscription();
-  }, []);
+    
+    // Automatically redirect to dashboard after a short delay
+    const redirectTimer = setTimeout(() => {
+      navigate('/dashboard');
+    }, 3000); // Redirect after 3 seconds
+    
+    return () => clearTimeout(redirectTimer);
+  }, [navigate]);
+
+  // If we detect the user already has an active subscription and there's no plan param,
+  // they might be revisiting this page - redirect them to dashboard immediately
+  useEffect(() => {
+    if (subscription.isActive && !plan && !subscription.loading) {
+      navigate('/dashboard');
+    }
+  }, [subscription.isActive, subscription.loading, plan, navigate]);
 
   const getPlanText = () => {
     if (plan === PLANS.MONTHLY) return 'Monthly';
@@ -42,12 +57,16 @@ export default function SubscriptionSuccess() {
           All premium features have been unlocked for your account.
         </p>
         
+        <p className="text-sm text-muted-foreground mt-2">
+          Redirecting you to the dashboard in a moment...
+        </p>
+        
         <div className="flex flex-col space-y-3 pt-6">
           <Button 
             onClick={() => navigate('/dashboard')}
             size="lg"
           >
-            Go to Dashboard
+            Go to Dashboard Now
           </Button>
           <Button 
             variant="outline"

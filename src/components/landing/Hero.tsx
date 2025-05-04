@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
-import { ArrowRight, BarChart2, LineChart, TrendingUp } from 'lucide-react';
+import { ArrowRight, BarChart2, LineChart, TrendingUp, CreditCard } from 'lucide-react';
 
 const Hero = () => {
   return (
@@ -34,14 +33,20 @@ const Hero = () => {
                   Get Started <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <Link to="/features">
+              <Link to="/pricing">
                 <Button size="lg" variant="outline" className="rounded-full shadow-md hover:shadow-lg transition-all duration-300">
-                  Learn More
+                  View Pricing <CreditCard className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
             </div>
 
-            <div className="pt-6 flex items-center justify-center lg:justify-start space-x-8 text-sm animate-fade-in">
+            <div className="pt-3 text-sm text-center lg:text-left animate-fade-in">
+              <span className="text-muted-foreground font-medium">
+                Subscription required to access all features
+              </span>
+            </div>
+
+            <div className="pt-3 flex items-center justify-center lg:justify-start space-x-8 text-sm animate-fade-in">
               <div className="flex items-center space-x-2">
                 <TrendingUp className="h-5 w-5 text-careervision-500" />
                 <span>Market Analysis</span>

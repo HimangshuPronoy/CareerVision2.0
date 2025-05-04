@@ -6,7 +6,6 @@ export const PRICE_IDS = {
 
 // Constants for subscription plans
 export const PLANS = {
-  FREE: 'free',
   MONTHLY: 'monthly',
   YEARLY: 'yearly',
 };

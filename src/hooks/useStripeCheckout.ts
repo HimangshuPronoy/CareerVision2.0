@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PRICE_IDS } from '@/lib/stripe';
+import { PRICE_IDS, PLANS } from '@/lib/stripe';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { getCheckoutUrl } from '@/integrations/stripe/client';
@@ -20,15 +20,16 @@ export const useStripeCheckout = () => {
   const mockSubscription = (priceId: string) => {
     setLoading(true);
     
-    let plan = 'monthly';
+    let plan = PLANS.MONTHLY;
     
     // Determine which plan based on price ID
     if (priceId === PRICE_IDS.YEARLY) {
-      plan = 'yearly';
+      plan = PLANS.YEARLY;
     }
     
     setTimeout(() => {
       setLoading(false);
+      // Add plan information to the URL for the success page
       window.location.href = `/subscription/success?plan=${plan}`;
     }, 1500);
     
@@ -66,7 +67,10 @@ export const useStripeCheckout = () => {
         throw new Error('Supabase key is missing. Check configuration.');
       }
 
-      console.log(`Creating checkout session for price: ${priceId}, user: ${user.id}`);
+      // Determine plan type for success page
+      const planType = priceId === PRICE_IDS.YEARLY ? PLANS.YEARLY : PLANS.MONTHLY;
+
+      console.log(`Creating checkout session for price: ${priceId}, user: ${user.id}, plan: ${planType}`);
       
       // Call the Supabase function directly with fetch
       const response = await fetch(
@@ -81,6 +85,8 @@ export const useStripeCheckout = () => {
             priceId,
             customerId: user.id,
             customerEmail: user.email,
+            // Include success URL with plan information
+            successUrl: `${window.location.origin}/subscription/success?plan=${planType}`,
           }),
         }
       );
@@ -140,10 +146,10 @@ export const useStripeCheckout = () => {
         description: "You'll be redirected to Stripe to complete payment.",
       });
       
-      // Add a small delay before redirecting to make sure we see the logs
+      // Add a small delay before redirecting to make sure toast is visible
       setTimeout(() => {
         window.location.href = checkoutUrl;
-      }, 500);
+      }, 800);
       
       return; // Keep loading state for the redirect
       

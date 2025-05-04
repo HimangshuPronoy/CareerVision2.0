@@ -13,7 +13,7 @@ const USE_MOCK_DATA = false;
 
 interface SubscriptionStatus {
   isActive: boolean;
-  plan: 'free' | 'monthly' | 'yearly' | null;
+  plan: 'monthly' | 'yearly' | null;
   currentPeriodEnd: Date | null;
   loading: boolean;
 }
@@ -48,8 +48,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     // Get subscription status from localStorage for persistence
     const storedPlan = localStorage.getItem('mockSubscriptionPlan');
     
-    // Default to free if nothing in storage
-    let plan: 'free' | 'monthly' | 'yearly' | null = storedPlan as 'free' | 'monthly' | 'yearly' | null || 'free';
+    // Default to null if nothing in storage (no free plan anymore)
+    let plan: 'monthly' | 'yearly' | null = storedPlan as 'monthly' | 'yearly' | null || null;
     
     // Check URL for /subscription/success to simulate successful Stripe checkout
     if (window.location.pathname === '/subscription/success') {
@@ -76,7 +76,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     return {
       isActive: plan === 'monthly' || plan === 'yearly',
       plan,
-      currentPeriodEnd: plan === 'free' ? null : currentPeriodEnd,
+      currentPeriodEnd: plan === null ? null : currentPeriodEnd,
       loading: false,
     };
   };
