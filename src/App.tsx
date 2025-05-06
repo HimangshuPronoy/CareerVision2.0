@@ -23,6 +23,7 @@ import SubscriptionCancel from "./pages/SubscriptionCancel";
 import { AuthProvider } from "./contexts/AuthContext";
 import { SubscriptionProvider } from "./contexts/SubscriptionContext";
 import RouteGuard from "./components/RouteGuard";
+import Waitlist from "./pages/Waitlist";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -38,7 +39,17 @@ const App: React.FC = () => {
             <Sonner />
             <BrowserRouter>
               <Routes>
-                <Route path="/" element={<Index />} />
+                {/* Public routes */}
+                <Route path="/" element={<Waitlist />} />
+                <Route path="/terms" element={<TermsOfService />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                
+                {/* Protected routes - will redirect to waitlist while app is in waitlist mode */}
+                <Route path="/app" element={
+                  <RouteGuard>
+                    <Index />
+                  </RouteGuard>
+                } />
                 <Route path="/dashboard" element={
                   <RouteGuard>
                     <Dashboard />
@@ -74,9 +85,21 @@ const App: React.FC = () => {
                     <ResumeBuilder />
                   </RouteGuard>
                 } />
-                <Route path="/pricing" element={<Pricing />} />
-                <Route path="/subscription/success" element={<SubscriptionSuccess />} />
-                <Route path="/subscription/cancel" element={<SubscriptionCancel />} />
+                <Route path="/pricing" element={
+                  <RouteGuard>
+                    <Pricing />
+                  </RouteGuard>
+                } />
+                <Route path="/subscription/success" element={
+                  <RouteGuard>
+                    <SubscriptionSuccess />
+                  </RouteGuard>
+                } />
+                <Route path="/subscription/cancel" element={
+                  <RouteGuard>
+                    <SubscriptionCancel />
+                  </RouteGuard>
+                } />
                 <Route path="/login" element={
                   <RouteGuard requireAuth={false}>
                     <Login />
@@ -87,9 +110,8 @@ const App: React.FC = () => {
                     <Signup />
                   </RouteGuard>
                 } />
-                <Route path="/terms" element={<TermsOfService />} />
-                <Route path="/privacy" element={<PrivacyPolicy />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                
+                {/* Catch-all route */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
