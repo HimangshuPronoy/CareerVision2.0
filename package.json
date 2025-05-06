@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "check:supabase": "node scripts/check-supabase.js",
     "db:migrate": "node scripts/apply-migrations.js",
-    "db:setup": "npm run db:migrate && npm run check:supabase"
+    "db:setup": "npm run db:migrate && npm run check:supabase",
+    "postinstall": "npm install framer-motion@12.10.0 --save"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -51,6 +52,7 @@
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.3.0",
+    "framer-motion": "^12.10.0",
     "input-otp": "^1.2.4",
     "lucide-react": "^0.462.0",
     "next-themes": "^0.3.0",
@@ -61,6 +63,7 @@
     "react-resizable-panels": "^2.1.3",
     "react-router-dom": "^6.26.2",
     "recharts": "^2.12.7",
+    "rollup": "^4.40.2",
     "sonner": "^1.5.0",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
