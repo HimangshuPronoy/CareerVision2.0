@@ -2,7 +2,7 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
-// Set this to false to enable app access when ready to launch
+// Set this to true to enable waitlist mode (redirects all protected routes to the waitlist page)
 const APP_IN_WAITLIST = true;
 
 interface RouteGuardProps {
@@ -15,7 +15,9 @@ const RouteGuard: React.FC<RouteGuardProps> = ({ children, requireAuth = true })
   const location = useLocation();
 
   // While app is in waitlist mode, redirect all attempted access to protected routes to the waitlist page
+  // This check needs to come first before any other checks
   if (APP_IN_WAITLIST && location.pathname !== '/') {
+    console.log('App in waitlist mode, redirecting to /', location.pathname);
     return <Navigate to="/" replace />;
   }
 

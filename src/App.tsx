@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
@@ -24,6 +24,9 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { SubscriptionProvider } from "./contexts/SubscriptionContext";
 import RouteGuard from "./components/RouteGuard";
 import Waitlist from "./pages/Waitlist";
+
+// App is in waitlist mode flag
+const APP_IN_WAITLIST = true;
 
 // Create a client
 const queryClient = new QueryClient();
@@ -101,18 +104,20 @@ const App: React.FC = () => {
                   </RouteGuard>
                 } />
                 <Route path="/login" element={
+                  APP_IN_WAITLIST ? <Navigate to="/" replace /> :
                   <RouteGuard requireAuth={false}>
                     <Login />
                   </RouteGuard>
                 } />
                 <Route path="/signup" element={
+                  APP_IN_WAITLIST ? <Navigate to="/" replace /> :
                   <RouteGuard requireAuth={false}>
                     <Signup />
                   </RouteGuard>
                 } />
                 
                 {/* Catch-all route */}
-                <Route path="*" element={<NotFound />} />
+                <Route path="*" element={APP_IN_WAITLIST ? <Navigate to="/" replace /> : <NotFound />} />
               </Routes>
             </BrowserRouter>
           </SubscriptionProvider>
