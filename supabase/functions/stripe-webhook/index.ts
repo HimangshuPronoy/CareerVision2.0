@@ -12,6 +12,13 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+console.log("Webhook function initialized with:", {
+  supabaseUrl: supabaseUrl ? "Set" : "Not set",
+  supabaseServiceKey: supabaseServiceKey ? "Set" : "Not set",
+  stripeSecretKey: Deno.env.get('STRIPE_SECRET_KEY') ? "Set" : "Not set",
+  webhookSecret: Deno.env.get('STRIPE_WEBHOOK_SECRET') ? "Set" : "Not set"
+})
+
 // This is needed to handle CORS preflight requests
 async function handleCors(req: Request): Promise<Response | null> {
   if (req.method === 'OPTIONS') {
@@ -21,14 +28,20 @@ async function handleCors(req: Request): Promise<Response | null> {
 }
 
 serve(async (req) => {
+  console.log(`Webhook request received, method: ${req.method}, URL: ${req.url}`)
+  
   // Handle CORS
   const corsResponse = await handleCors(req)
-  if (corsResponse) return corsResponse
+  if (corsResponse) {
+    console.log("Handling CORS preflight request")
+    return corsResponse
+  }
 
   try {
     const signature = req.headers.get('stripe-signature')
 
     if (!signature) {
+      console.error("Webhook signature missing from request headers")
       return new Response(
         JSON.stringify({ error: 'Webhook signature missing' }),
         {
@@ -38,21 +51,31 @@ serve(async (req) => {
       )
     }
 
+    console.log("Received webhook with signature:", signature.substring(0, 10) + "...")
+
     // Get the raw request body
     const body = await req.text()
+    console.log("Request body length:", body.length)
 
     // Verify the webhook signature
     let event
     try {
+      const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET') || ''
+      console.log("Verifying webhook with secret:", webhookSecret ? webhookSecret.substring(0, 5) + "..." : "MISSING")
+      
       event = stripe.webhooks.constructEvent(
         body,
         signature,
-        Deno.env.get('STRIPE_WEBHOOK_SECRET') || '',
+        webhookSecret,
       )
     } catch (err) {
       console.error(`Webhook signature verification failed: ${err.message}`)
+      console.error(err.stack)
       return new Response(
-        JSON.stringify({ error: 'Webhook signature verification failed' }),
+        JSON.stringify({ 
+          error: 'Webhook signature verification failed',
+          details: err.message 
+        }),
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -60,7 +83,7 @@ serve(async (req) => {
       )
     }
 
-    console.log(`Event type: ${event.type}`)
+    console.log(`Event processed successfully. Type: ${event.type}, ID: ${event.id}`)
 
     // Handle specific event types
     switch (event.type) {
@@ -75,7 +98,12 @@ serve(async (req) => {
                        subscription.metadata?.user_id || 
                        null
           
+          console.log(`Processing ${event.type} for customer: ${customerId}, user: ${userId}`)
+          
           if (userId) {
+            console.log(`Updating subscription in database for user: ${userId}`)
+            console.log(`Subscription status: ${subscription.status}, ID: ${subscription.id}`)
+            
             // Update user's subscription status in your database
             // This is just an example, adjust according to your data model
             const { error } = await supabase
@@ -91,7 +119,11 @@ serve(async (req) => {
             
             if (error) {
               console.error('Error updating user subscription:', error)
+            } else {
+              console.log(`Successfully updated subscription for user: ${userId}`)
             }
+          } else {
+            console.warn(`No userId found in subscription metadata for customer: ${customerId}`)
           }
         }
         break
@@ -106,7 +138,11 @@ serve(async (req) => {
                        subscription.metadata?.user_id || 
                        null
           
+          console.log(`Processing subscription cancellation for customer: ${customerId}, user: ${userId}`)
+          
           if (userId) {
+            console.log(`Removing subscription from database for user: ${userId}`)
+            
             // Update user's subscription status in your database
             const { error } = await supabase
               .from('profiles')
@@ -121,13 +157,17 @@ serve(async (req) => {
             
             if (error) {
               console.error('Error updating user subscription:', error)
+            } else {
+              console.log(`Successfully removed subscription for user: ${userId}`)
             }
+          } else {
+            console.warn(`No userId found in subscription metadata for customer: ${customerId}`)
           }
         }
         break
 
       default:
-        console.log(`Unhandled event type: ${event.type}`)
+        console.log(`Unhandled event type: ${event.type}, ID: ${event.id}`)
     }
 
     return new Response(
@@ -138,9 +178,13 @@ serve(async (req) => {
       }
     )
   } catch (error) {
-    console.error('Error processing webhook:', error)
+    console.error('Error processing webhook:', error.message)
+    console.error(error.stack)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error.stack 
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

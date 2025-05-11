@@ -51,9 +51,9 @@ const Waitlist = () => {
   const { toast } = useToast();
   const DISCORD_INVITE_URL = "https://discord.gg/ypwhKxFPJM";
 
-  // Launch date countdown - set to May 15, 2025
+  // Launch date countdown - set to June 1, 2025
   useEffect(() => {
-    const launchDate = new Date('2025-05-15T00:00:00');
+    const launchDate = new Date('2025-06-01T00:00:00');
     
     const interval = setInterval(() => {
       const now = new Date();
@@ -142,7 +142,7 @@ const Waitlist = () => {
               <div className="inline-block rounded-full bg-careervision-50 dark:bg-careervision-900/30 px-4 py-1.5 text-sm font-medium text-careervision-700 dark:text-careervision-300 border border-careervision-200 dark:border-careervision-800/50">
                 <span className="flex items-center">
                   <Sparkles className="h-4 w-4 mr-1.5 text-careervision-500" />
-                  Launching May 15, 2025
+                  Launching June 1, 2025
                 </span>
               </div>
             </motion.div>
