@@ -99,9 +99,9 @@ serve(async (req) => {
         console.error('Error determining plan type:', error);
       }
 
-      // Check if subscription is active
-      const isActive = stripeSubscription.status === 'active' || 
-                      stripeSubscription.status === 'trialing';
+      // Check if subscription is active - only consider 'active' status as valid
+      // This ensures incomplete/unpaid subscriptions aren't considered active
+      const isActive = stripeSubscription.status === 'active';
       
       subscriptionData = {
         isActive,

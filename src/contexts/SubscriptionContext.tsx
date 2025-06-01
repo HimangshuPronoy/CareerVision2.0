@@ -78,9 +78,23 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setSubscription(defaultSubscription);
       } else {
         if (data && data.subscription) {
+          // Add extra verification to ensure subscription is truly active
+          const isReallyActive = 
+            data.subscription.isActive && 
+            data.subscription.status === 'active' && 
+            data.subscription.plan !== 'free' && 
+            data.subscription.currentPeriodEnd !== null;
+
+          console.log('Subscription verification:', {
+            claimed: data.subscription.isActive,
+            verified: isReallyActive,
+            status: data.subscription.status,
+            plan: data.subscription.plan
+          });
+
           setSubscription({
-            isActive: data.subscription.isActive,
-            plan: data.subscription.plan,
+            isActive: isReallyActive, // Use our stricter verification
+            plan: isReallyActive ? data.subscription.plan : null,
             currentPeriodEnd: data.subscription.currentPeriodEnd,
             cancelAtPeriodEnd: data.subscription.cancelAtPeriodEnd,
           });
