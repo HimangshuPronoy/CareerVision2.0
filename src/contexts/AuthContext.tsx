@@ -54,6 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    
     try {
       setError(null);
       const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -67,6 +68,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     }
   };
+  
+
 
   const signUp = async (email: string, password: string, metadata?: { [key: string]: any }) => {
     try {

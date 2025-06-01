@@ -9,7 +9,7 @@ import CareerPathCard from '@/components/dashboard/CareerPathCard';
 import RecommendedSkills from '@/components/dashboard/RecommendedSkills';
 import IndustryTrendsCard from '@/components/dashboard/IndustryTrendsCard';
 import AIInsights from '@/components/dashboard/AIInsights';
-import { Award, TrendingUp, BarChart2, GraduationCap } from 'lucide-react';
+import { Award, TrendingUp, BarChart2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useAIInsights } from '@/hooks/useAIInsights';
@@ -36,7 +36,6 @@ const Dashboard = () => {
   const [skillMatchScore, setSkillMatchScore] = useState(0);
   const [careerOpportunities, setCareerOpportunities] = useState(0);
   const [industryGrowthRate, setIndustryGrowthRate] = useState(0);
-  const [learningProgress, setLearningProgress] = useState(0);
   const [userProfile, setUserProfile] = useState<UserProfileType | null>(null);
   
   // Default skill data (will be replaced with real data when available)
@@ -67,7 +66,6 @@ const Dashboard = () => {
       setSkillMatchScore(0);
       setCareerOpportunities(0);
       setIndustryGrowthRate(10.5); // Default growth rate
-      setLearningProgress(0);
       return;
     }
 
@@ -115,23 +113,7 @@ const Dashboard = () => {
       setIndustryGrowthRate(10.5); // Default growth rate
     }
     
-    // Fix: Set learning progress based on completed resources or skills
-    // For now, we'll calculate it based on skills and recommendations
-    if (hasSkills) {
-      // Calculate a rough estimate of learning progress
-      // We'll consider each skill as something learned, plus any active recommendations
-      let progress = userProfile.skills.length;
-      
-      // Add a bonus if the user has recommendations they're actively working on
-      if (recommendations && recommendations.length > 0) {
-        // We'll add a partial credit for each recommendation (assuming they're in progress)
-        progress += Math.ceil(recommendations.length / 2);
-      }
-      
-      setLearningProgress(progress);
-    } else {
-      setLearningProgress(0);
-    }
+    // No learning progress calculation needed
   };
 
   // Fetch user profile data and career recommendations on component mount
@@ -173,9 +155,26 @@ const Dashboard = () => {
         if (fetchedProfile.skills && fetchedProfile.skills.length > 0) {
           // Transform user skills into the format needed for the radar chart
           const formattedSkills = fetchedProfile.skills.slice(0, 6).map(skill => {
-            // Generate a random user score and market demand for visualization
-            const userScore = Math.floor(Math.random() * 40) + 40; // 40-80
-            const marketDemand = Math.floor(Math.random() * 30) + 60; // 60-90
+            // Get user score from local storage if available
+            let userScore = 50; // Default value
+            try {
+              const savedSkillsData = localStorage.getItem('userSkillEfficiency');
+              if (savedSkillsData) {
+                const parsedData = JSON.parse(savedSkillsData);
+                const savedSkill = parsedData.find((s: any) => s.skill.toLowerCase() === skill.toLowerCase());
+                if (savedSkill) {
+                  userScore = savedSkill.efficiency;
+                }
+              }
+            } catch (error) {
+              console.error('Error retrieving skill efficiency from local storage:', error);
+            }
+            
+            // Generate a stable market demand based on skill name hash
+            // This ensures the same skill always gets the same market demand value
+            const hashCode = skill.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            const marketDemand = 60 + (hashCode % 30); // 60-90 range, but deterministic
+            
             return {
               skill,
               userScore,
@@ -228,7 +227,7 @@ const Dashboard = () => {
     <DashboardLayout>
       <DashboardHeader userName={userName} />
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6 mb-6">
         <StatsCard 
           title="Skill Match Score" 
           value={`${skillMatchScore}%`} 
@@ -249,12 +248,6 @@ const Dashboard = () => {
           change={2.1} 
           icon={<BarChart2 className="h-5 w-5 text-careervision-500" />} 
           description={userProfile?.industry || "Technology"} 
-        />
-        <StatsCard 
-          title="Learning Progress" 
-          value={learningProgress.toString()} 
-          icon={<GraduationCap className="h-5 w-5 text-insight-500" />} 
-          description="Skills acquired or in progress"
         />
       </div>
       

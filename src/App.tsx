@@ -18,6 +18,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Settings from "./pages/Settings";
 import ResumeBuilder from "./pages/ResumeBuilder";
 import Pricing from "./pages/Pricing";
+import Features from "./pages/Features";
 import SubscriptionSuccess from "./pages/SubscriptionSuccess";
 import SubscriptionCancel from "./pages/SubscriptionCancel";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -32,49 +33,50 @@ const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AuthProvider>
-          <SubscriptionProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
+        <BrowserRouter>
+          <AuthProvider>
+            <SubscriptionProvider>
+              <Toaster />
+              <Sonner />
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/dashboard" element={
-                  <RouteGuard>
+                  <RouteGuard requireSubscription={true}>
                     <Dashboard />
                   </RouteGuard>
                 } />
                 <Route path="/trends" element={
-                  <RouteGuard>
+                  <RouteGuard requireSubscription={true}>
                     <MarketTrends />
                   </RouteGuard>
                 } />
                 <Route path="/profile" element={
-                  <RouteGuard>
+                  <RouteGuard requireSubscription={true}>
                     <Profile />
                   </RouteGuard>
                 } />
                 <Route path="/skills" element={
-                  <RouteGuard>
+                  <RouteGuard requireSubscription={true}>
                     <Skills />
                   </RouteGuard>
                 } />
                 <Route path="/career-paths" element={
-                  <RouteGuard>
+                  <RouteGuard requireSubscription={true}>
                     <CareerPaths />
                   </RouteGuard>
                 } />
                 <Route path="/settings" element={
-                  <RouteGuard>
+                  <RouteGuard requireSubscription={true}>
                     <Settings />
                   </RouteGuard>
                 } />
                 <Route path="/resume-builder" element={
-                  <RouteGuard>
+                  <RouteGuard requireSubscription={true}>
                     <ResumeBuilder />
                   </RouteGuard>
                 } />
                 <Route path="/pricing" element={<Pricing />} />
+                <Route path="/features" element={<Features />} />
                 <Route path="/subscription/success" element={<SubscriptionSuccess />} />
                 <Route path="/subscription/cancel" element={<SubscriptionCancel />} />
                 <Route path="/login" element={
@@ -92,9 +94,9 @@ const App: React.FC = () => {
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </BrowserRouter>
-          </SubscriptionProvider>
-        </AuthProvider>
+            </SubscriptionProvider>
+          </AuthProvider>
+        </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
   );

@@ -16,24 +16,23 @@ const Pricing: React.FC = () => {
   const { loading, createCheckoutSession } = useStripeCheckout();
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'yearly'>('monthly');
 
-  const features = {
-    free: [
-      'Basic career insights',
-      'Job market overview',
-      'Limited skill assessments',
-      'Resume builder (1 resume)',
-    ],
-    pro: [
-      'Advanced career insights',
-      'Detailed job market analysis',
-      'Comprehensive skill assessments',
-      'Unlimited resume builder',
-      'Career path planning',
-      'Industry-specific trends',
-      'AI-powered recommendations',
-      'Priority support',
-    ],
-  };
+  const features = [
+    'Advanced AI career insights',
+    'Detailed job market analysis',
+    'Comprehensive skill assessments',
+    'Unlimited resume builder',
+    'Career path planning',
+    'Industry-specific trends',
+    'AI-powered skill recommendations',
+    'Priority support',
+    'Personalized 1-on-1 career coaching',
+    'Advanced salary negotiation tools',
+    'Executive resume review',
+    'Interview preparation with AI',
+    'LinkedIn profile optimization',
+    'Early access to new features',
+    'Dedicated account manager',
+  ];
 
   const handleSubscribe = async (priceId: string) => {
     await createCheckoutSession(priceId);
@@ -75,57 +74,12 @@ const Pricing: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-5xl mx-auto">
-          {/* Free Plan */}
-          <Card className="border-2 border-muted relative overflow-hidden">
-            <CardHeader className="pb-3">
-              <CardTitle>Free Plan</CardTitle>
-              <CardDescription>Basic career insights for beginners</CardDescription>
-              <div className="mt-1 text-4xl font-bold">$0</div>
-            </CardHeader>
-            <CardContent className="pb-6">
-              <ul className="space-y-3">
-                {features.free.map((feature, index) => (
-                  <li key={index} className="flex items-start">
-                    <Check className="h-5 w-5 text-green-500 shrink-0 mr-2" />
-                    <span>{feature}</span>
-                  </li>
-                ))}
-                {features.pro.slice(4).map((feature, index) => (
-                  <li key={index} className="flex items-start text-muted-foreground">
-                    <X className="h-5 w-5 text-red-500 shrink-0 mr-2" />
-                    <span>{feature}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-            <CardFooter>
-              {user ? (
-                subscription.plan === null ? (
-                  <div className="text-center w-full">
-                    <p className="text-sm text-muted-foreground mb-2">You are currently on the free plan</p>
-                    <Button variant="outline" size="lg" className="w-full" asChild>
-                      <Link to="/dashboard">Go to Dashboard</Link>
-                    </Button>
-                  </div>
-                ) : (
-                  <Button variant="outline" size="lg" className="w-full" asChild>
-                    <Link to="/dashboard">Go to Dashboard</Link>
-                  </Button>
-                )
-              ) : (
-                <Button variant="outline" size="lg" className="w-full" asChild>
-                  <Link to="/signup">Sign up for free</Link>
-                </Button>
-              )}
-            </CardFooter>
-          </Card>
-
+        <div className="max-w-3xl mx-auto">
           {/* Pro Plan */}
-          <Card className="border-2 relative overflow-hidden bg-gradient-to-br from-careervision-500/5 to-insight-500/5">
+          <Card className="border-2 border-primary relative overflow-hidden">
             <div className="absolute top-0 right-0">
               <Badge className="rounded-bl-lg rounded-tr-lg px-3 py-1 bg-careervision-500 text-white">
-                Recommended
+                All Features Included
               </Badge>
             </div>
             <CardHeader className="pb-3">
@@ -149,13 +103,7 @@ const Pricing: React.FC = () => {
             </CardHeader>
             <CardContent className="pb-6">
               <ul className="space-y-3">
-                {features.free.map((feature, index) => (
-                  <li key={index} className="flex items-start">
-                    <Check className="h-5 w-5 text-green-500 shrink-0 mr-2" />
-                    <span>{feature}</span>
-                  </li>
-                ))}
-                {features.pro.slice(4).map((feature, index) => (
+                {features.map((feature, index) => (
                   <li key={index} className="flex items-start">
                     <Check className="h-5 w-5 text-green-500 shrink-0 mr-2" />
                     <span>{feature}</span>
@@ -204,6 +152,8 @@ const Pricing: React.FC = () => {
               )}
             </CardFooter>
           </Card>
+
+
         </div>
 
         <div className="mt-12 text-center">

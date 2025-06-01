@@ -16,6 +16,7 @@ const Skills = () => {
   const [recommendedSkills, setRecommendedSkills] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userSkills, setUserSkills] = useState<string[]>([]);
+  const [skillEfficiency, setSkillEfficiency] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetchData();
@@ -32,12 +33,20 @@ const Skills = () => {
         // Set user skills
         setUserSkills(userProfile.skills || []);
         
+        // Load saved skill efficiency if available
+        const savedEfficiency = localStorage.getItem('skillEfficiency');
+        if (savedEfficiency) {
+          setSkillEfficiency(JSON.parse(savedEfficiency));
+        }
+        
         // Transform skills for the radar chart if we have skills
         if (userProfile.skills && userProfile.skills.length > 0) {
           const formattedSkills = userProfile.skills.slice(0, 6).map(skill => {
-            // Generate a score and demand for visualization
-            const userScore = Math.floor(Math.random() * 40) + 40; // 40-80
-            const marketDemand = Math.floor(Math.random() * 30) + 60; // 60-90
+            // Use saved efficiency or default to 50
+            const savedEfficiency = localStorage.getItem('skillEfficiency');
+            const efficiencyData = savedEfficiency ? JSON.parse(savedEfficiency) : {};
+            const userScore = efficiencyData[skill] || 50;
+            const marketDemand = Math.floor(Math.random() * 30) + 60; // 60-90 for market demand
             return {
               skill,
               userScore,
@@ -72,6 +81,22 @@ const Skills = () => {
     fetchData();
   };
 
+  const handleSkillEfficiencyChange = (skill: string, value: number) => {
+    const newEfficiency = { ...skillEfficiency, [skill]: value };
+    setSkillEfficiency(newEfficiency);
+    localStorage.setItem('skillEfficiency', JSON.stringify(newEfficiency));
+    
+    // Update the skills data for the chart
+    const updatedSkillsData = skillsData.map(item => {
+      if (item.skill === skill) {
+        return { ...item, userScore: value };
+      }
+      return item;
+    });
+    
+    setSkillsData(updatedSkillsData);
+  };
+
   return (
     <DashboardLayout>
       <div className="mb-6">
@@ -87,6 +112,30 @@ const Skills = () => {
         </CardHeader>
         <CardContent>
           <SkillsInput initialSkills={userSkills} onChange={handleSkillsChange} />
+          
+          {userSkills.length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-lg font-medium mb-4">Rate Your Skill Efficiency</h3>
+              <div className="space-y-4">
+                {userSkills.map((skill) => (
+                  <div key={skill} className="grid grid-cols-[1fr_2fr] gap-4 items-center">
+                    <div className="font-medium">{skill}</div>
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="range" 
+                        min="0" 
+                        max="100" 
+                        value={skillEfficiency[skill] || 50} 
+                        onChange={(e) => handleSkillEfficiencyChange(skill, parseInt(e.target.value))} 
+                        className="flex-1"
+                      />
+                      <span className="w-10 text-right">{skillEfficiency[skill] || 50}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
