@@ -25,11 +25,6 @@ const Pricing: React.FC = () => {
     'Industry-specific trends',
     'AI-powered skill recommendations',
     'Priority support',
-    'Personalized 1-on-1 career coaching',
-    'Advanced salary negotiation tools',
-    'Executive resume review',
-    'Interview preparation with AI',
-    'LinkedIn profile optimization',
     'Early access to new features',
     'Dedicated account manager',
   ];
