@@ -4,7 +4,7 @@ import { useAuth } from './AuthContext';
 import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-type SubscriptionPlan = 'monthly' | 'yearly' | 'premium' | null;
+type SubscriptionPlan = 'basic_monthly' | 'basic_yearly' | 'standard_monthly' | 'standard_yearly' | 'lifetime' | null;
 
 interface SubscriptionContextType {
   subscription: {

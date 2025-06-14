@@ -20,11 +20,17 @@ export const useStripeCheckout = () => {
   const mockSubscription = (priceId: string) => {
     setLoading(true);
     
-    let plan = 'monthly';
+    let plan = 'basic_monthly';
     
     // Determine which plan based on price ID
-    if (priceId === PRICE_IDS.YEARLY) {
-      plan = 'yearly';
+    if (priceId === PRICE_IDS.BASIC_YEARLY) {
+      plan = 'basic_yearly';
+    } else if (priceId === PRICE_IDS.STANDARD_MONTHLY) {
+      plan = 'standard_monthly';
+    } else if (priceId === PRICE_IDS.STANDARD_YEARLY) {
+      plan = 'standard_yearly';
+    } else if (priceId === PRICE_IDS.LIFETIME) {
+      plan = 'lifetime';
     }
     
     setTimeout(() => {

@@ -19,10 +19,16 @@ export default function SubscriptionSuccess() {
   }, []);
 
   const getPlanText = () => {
-    if (plan === PLANS.MONTHLY) return 'Monthly';
-    if (plan === PLANS.YEARLY) return 'Yearly';
-    if (subscription.plan === PLANS.MONTHLY) return 'Monthly';
-    if (subscription.plan === PLANS.YEARLY) return 'Yearly';
+    if (plan === PLANS.BASIC_MONTHLY) return 'Basic Monthly';
+    if (plan === PLANS.BASIC_YEARLY) return 'Basic Yearly';
+    if (plan === PLANS.STANDARD_MONTHLY) return 'Standard Monthly';
+    if (plan === PLANS.STANDARD_YEARLY) return 'Standard Yearly';
+    if (plan === PLANS.LIFETIME) return 'Lifetime';
+    if (subscription.plan === PLANS.BASIC_MONTHLY) return 'Basic Monthly';
+    if (subscription.plan === PLANS.BASIC_YEARLY) return 'Basic Yearly';
+    if (subscription.plan === PLANS.STANDARD_MONTHLY) return 'Standard Monthly';
+    if (subscription.plan === PLANS.STANDARD_YEARLY) return 'Standard Yearly';
+    if (subscription.plan === PLANS.LIFETIME) return 'Lifetime';
     return 'Premium';
   };
 

@@ -4,7 +4,16 @@ import MainLayout from '@/components/layouts/MainLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useStripeCheckout } from '@/hooks/useStripeCheckout';
-import { PRICE_IDS, PRICES, YEARLY_SAVINGS_PERCENTAGE } from '@/lib/stripe';
+import {
+  BASIC_MONTHLY_PRICE,
+  BASIC_YEARLY_PRICE,
+  BASIC_YEARLY_SAVINGS_PERCENTAGE,
+  STANDARD_MONTHLY_PRICE,
+  STANDARD_YEARLY_PRICE,
+  STANDARD_YEARLY_SAVINGS_PERCENTAGE,
+  LIFETIME_PRICE,
+  PRICE_IDS,
+} from '@/lib/stripe';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Check, X, Loader2 } from 'lucide-react';
@@ -16,7 +25,25 @@ const Pricing: React.FC = () => {
   const { loading, createCheckoutSession } = useStripeCheckout();
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'yearly'>('monthly');
 
-  const features = [
+  const basicFeatures = [
+    'Basic AI career insights',
+    'Basic job market analysis',
+    'Basic skill assessments',
+    'Basic resume builder',
+    'Basic career path planning'
+  ];
+
+  const standardFeatures = [
+    'Advanced AI career insights',
+    'Detailed job market analysis',
+    'Comprehensive skill assessments',
+    'Unlimited resume builder',
+    'Career path planning',
+    'Industry-specific trends',
+    'AI-powered skill recommendations'
+  ];
+
+  const lifetimeFeatures = [
     'Advanced AI career insights',
     'Detailed job market analysis',
     'Comprehensive skill assessments',
@@ -26,7 +53,7 @@ const Pricing: React.FC = () => {
     'AI-powered skill recommendations',
     'Priority support',
     'Early access to new features',
-    'Dedicated account manager',
+    'Dedicated account manager'
   ];
 
   const handleSubscribe = async (priceId: string) => {
@@ -35,131 +62,149 @@ const Pricing: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="container mx-auto py-16 px-4 sm:px-6 lg:px-8 max-w-7xl">
-        <div className="text-center mb-16">
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-            <span className="gradient-text">Pricing Plans</span>
-          </h1>
-          <p className="mt-4 text-xl text-muted-foreground max-w-2xl mx-auto">
-            Choose the right plan to accelerate your career growth with data-driven insights and personalized recommendations.
+      <div className="container mx-auto py-10 px-4 max-w-6xl">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-careervision-500 to-insight-500 bg-clip-text text-transparent">Pricing Plans</h1>
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            Choose the perfect plan to unlock powerful AI-driven career insights.
           </p>
 
-          <div className="flex items-center justify-center mt-8">
-            <div className="relative flex rounded-full bg-muted p-1 mt-4">
+          {/* Billing Toggle */}
+          <div className="flex justify-center mt-8 mb-12">
+            <div className="inline-flex items-center p-1 bg-muted rounded-lg border border-border/50 shadow-sm">
               <button
-                type="button"
-                className={`relative flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition focus:outline-none ${
-                  billingInterval === 'monthly' ? 'bg-background shadow' : ''
-                }`}
                 onClick={() => setBillingInterval('monthly')}
+                className={`px-4 py-2 rounded-md font-medium transition ${billingInterval === 'monthly' ? 'bg-background shadow-md text-foreground' : 'text-muted-foreground'}`}
               >
-                Monthly billing
+                Monthly
               </button>
               <button
-                type="button"
-                className={`relative flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition focus:outline-none ${
-                  billingInterval === 'yearly' ? 'bg-background shadow' : ''
-                }`}
                 onClick={() => setBillingInterval('yearly')}
+                className={`px-4 py-2 rounded-md font-medium transition ${billingInterval === 'yearly' ? 'bg-background shadow-md text-foreground' : 'text-muted-foreground'}`}
               >
-                <span>Annual billing</span>
-                <Badge className="ml-2 bg-green-500 text-white">Save {YEARLY_SAVINGS_PERCENTAGE}%</Badge>
+                Yearly <Badge className="ml-2">Save up to {STANDARD_YEARLY_SAVINGS_PERCENTAGE}%</Badge>
               </button>
             </div>
           </div>
         </div>
 
-        <div className="max-w-3xl mx-auto">
-          {/* Pro Plan */}
-          <Card className="border-2 border-primary relative overflow-hidden">
-            <div className="absolute top-0 right-0">
-              <Badge className="rounded-bl-lg rounded-tr-lg px-3 py-1 bg-careervision-500 text-white">
-                All Features Included
-              </Badge>
-            </div>
-            <CardHeader className="pb-3">
-              <CardTitle>Pro Plan</CardTitle>
-              <CardDescription>Advanced career insights for professionals</CardDescription>
-              <div className="mt-1">
-                <span className="text-4xl font-bold">
-                  {billingInterval === 'monthly' 
-                    ? `$${PRICES.MONTHLY}` 
-                    : `$${PRICES.YEARLY}`}
-                </span>
-                <span className="text-muted-foreground">
-                  {billingInterval === 'monthly' ? '/month' : '/year'}
-                </span>
-              </div>
-              {billingInterval === 'yearly' && (
-                <div className="text-sm text-green-500 mt-1">
-                  ${PRICES.YEARLY_MONTHLY_EQUIVALENT}/month billed annually
-                </div>
-              )}
+        {/* Pricing Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 max-w-5xl mx-auto">
+          {/* Basic Plan */}
+          <Card className={`${subscription.isActive && (subscription.plan === 'basic_monthly' || subscription.plan === 'basic_yearly') ? 'border-primary/50 ring-2 ring-primary/20' : 'border-border'} shadow-md hover:shadow-lg transition-shadow duration-300`}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xl font-bold text-center">Basic Plan</CardTitle>
+              <CardDescription className="text-center">Essential career tools</CardDescription>
             </CardHeader>
-            <CardContent className="pb-6">
-              <ul className="space-y-3">
-                {features.map((feature, index) => (
-                  <li key={index} className="flex items-start">
-                    <Check className="h-5 w-5 text-green-500 shrink-0 mr-2" />
+            <CardContent>
+              <div className="text-center mb-6">
+                <span className="text-3xl font-bold">${billingInterval === 'monthly' ? BASIC_MONTHLY_PRICE : BASIC_YEARLY_PRICE / 12}</span>
+                <span className="text-muted-foreground">/month</span>
+                {billingInterval === 'yearly' && (
+                  <>
+                    <p className="text-muted-foreground">Billed yearly (${BASIC_YEARLY_PRICE}/year)</p>
+                    <p className="text-sm text-primary mt-1">Save ${BASIC_YEARLY_PRICE / 12 * 12 * (1 - 1 / (1 + BASIC_YEARLY_SAVINGS_PERCENTAGE / 100))} per year</p>
+                  </>
+                )}
+              </div>
+              <ul className="space-y-2">
+                {basicFeatures.map((feature, i) => (
+                  <li key={i} className="flex items-start">
+                    <Check className="h-5 w-5 text-primary mr-2 shrink-0" />
                     <span>{feature}</span>
                   </li>
                 ))}
               </ul>
             </CardContent>
             <CardFooter>
-              {user ? (
-                subscription.plan === (billingInterval === 'monthly' ? 'monthly' : 'yearly') ? (
-                  <div className="text-center w-full">
-                    <p className="text-sm text-muted-foreground mb-2">You are currently on this plan</p>
-                    <Button variant="outline" size="lg" className="w-full" asChild>
-                      <Link to="/dashboard">Go to Dashboard</Link>
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    size="lg"
-                    className="w-full bg-gradient-to-r from-careervision-500 to-insight-500 hover:from-careervision-600 hover:to-insight-600"
-                    onClick={() => handleSubscribe(
-                      billingInterval === 'monthly' 
-                        ? PRICE_IDS.MONTHLY 
-                        : PRICE_IDS.YEARLY
-                    )}
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      subscription.isActive ? 'Change Plan' : 'Subscribe Now'
-                    )}
-                  </Button>
-                )
-              ) : (
-                <Button 
-                  size="lg" 
-                  className="w-full bg-gradient-to-r from-careervision-500 to-insight-500 hover:from-careervision-600 hover:to-insight-600"
-                  asChild
-                >
-                  <Link to="/signup">Sign up and Subscribe</Link>
-                </Button>
-              )}
+              <Button 
+                className="w-full bg-gradient-to-r from-careervision-500 to-insight-500 hover:from-careervision-600 hover:to-insight-600" 
+                size="lg"
+                disabled={loading}
+                onClick={() => handleSubscribe(billingInterval === 'monthly' ? PRICE_IDS.BASIC_MONTHLY : PRICE_IDS.BASIC_YEARLY)}
+              >
+                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                {loading ? 'Loading...' : subscription.isActive && (subscription.plan === 'basic_monthly' || subscription.plan === 'basic_yearly') ? 'Manage Plan' : 'Get Basic'}
+              </Button>
             </CardFooter>
           </Card>
 
+          {/* Standard Plan */}
+          <Card className={`${subscription.isActive && (subscription.plan === 'standard_monthly' || subscription.plan === 'standard_yearly') ? 'border-primary/50 ring-2 ring-primary/20' : 'border-border'} shadow-md hover:shadow-lg transition-shadow duration-300 relative overflow-hidden`}>
+            <div className="absolute top-0 left-0 w-full bg-gradient-to-r from-careervision-500 to-insight-500 text-white text-center py-1 text-sm font-medium">Most Popular</div>
+            <CardHeader className="pb-2 pt-6">
+              <CardTitle className="text-xl font-bold text-center">Standard Plan</CardTitle>
+              <CardDescription className="text-center">Advanced career guidance</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center mb-6">
+                <span className="text-3xl font-bold">${billingInterval === 'monthly' ? STANDARD_MONTHLY_PRICE : STANDARD_YEARLY_PRICE / 12}</span>
+                <span className="text-muted-foreground">/month</span>
+                {billingInterval === 'yearly' && (
+                  <>
+                    <p className="text-muted-foreground">Billed yearly (${STANDARD_YEARLY_PRICE}/year)</p>
+                    <p className="text-sm text-primary mt-1">Save ${STANDARD_YEARLY_SAVINGS_PERCENTAGE}% per year</p>
+                  </>
+                )}
+              </div>
+              <ul className="space-y-2">
+                {standardFeatures.map((feature, i) => (
+                  <li key={i} className="flex items-start">
+                    <Check className="h-5 w-5 text-primary mr-2 shrink-0" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+            <CardFooter>
+              <Button 
+                className="w-full bg-gradient-to-r from-careervision-500 to-insight-500 hover:from-careervision-600 hover:to-insight-600" 
+                size="lg"
+                disabled={loading}
+                onClick={() => handleSubscribe(billingInterval === 'monthly' ? PRICE_IDS.STANDARD_MONTHLY : PRICE_IDS.STANDARD_YEARLY)}
+              >
+                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                {loading ? 'Loading...' : subscription.isActive && (subscription.plan === 'standard_monthly' || subscription.plan === 'standard_yearly') ? 'Manage Plan' : 'Get Standard'}
+              </Button>
+            </CardFooter>
+          </Card>
 
-        </div>
-
-        <div className="mt-12 text-center">
-          <p className="text-muted-foreground">
-            All plans include a 14-day money-back guarantee. Need a custom plan? 
-            <a href="mailto:support@careervision.io" className="text-careervision-500 ml-1">Contact us</a>.
-          </p>
+          {/* Lifetime Plan */}
+          <Card className={`${subscription.isActive && subscription.plan === 'lifetime' ? 'border-primary/50 ring-2 ring-primary/20' : 'border-border'} shadow-md hover:shadow-lg transition-shadow duration-300`}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xl font-bold text-center">Lifetime Plan</CardTitle>
+              <CardDescription className="text-center">Ultimate career support</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center mb-6">
+                <span className="text-3xl font-bold">$99</span>
+                <span className="text-muted-foreground">/one-time</span>
+              </div>
+              <ul className="space-y-2">
+                {lifetimeFeatures.map((feature, i) => (
+                  <li key={i} className="flex items-start">
+                    <Check className="h-5 w-5 text-primary mr-2 shrink-0" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+            <CardFooter>
+              <Button 
+                className="w-full bg-gradient-to-r from-careervision-500 to-insight-500 hover:from-careervision-600 hover:to-insight-600" 
+                size="lg"
+                disabled={loading}
+                onClick={() => handleSubscribe(PRICE_IDS.LIFETIME)}
+              >
+                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                {loading ? 'Loading...' : subscription.isActive && subscription.plan === 'lifetime' ? 'Manage Plan' : 'Get Lifetime Access'}
+              </Button>
+            </CardFooter>
+          </Card>
         </div>
       </div>
     </MainLayout>
   );
 };
 
-export default Pricing; 
+export default Pricing;

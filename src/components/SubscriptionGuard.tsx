@@ -7,7 +7,7 @@ import { PLANS } from '@/lib/stripe';
 interface SubscriptionGuardProps {
   children: React.ReactNode;
   fallback?: React.ReactNode;
-  requiredPlans?: Array<'monthly' | 'yearly'>;
+  requiredPlans?: Array<'basic_monthly' | 'basic_yearly' | 'standard_monthly' | 'standard_yearly' | 'lifetime'>;
 }
 
 /**
@@ -18,7 +18,7 @@ interface SubscriptionGuardProps {
 export const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
   children,
   fallback,
-  requiredPlans = [PLANS.MONTHLY, PLANS.YEARLY],
+  requiredPlans = [PLANS.BASIC_MONTHLY, PLANS.BASIC_YEARLY, PLANS.STANDARD_MONTHLY, PLANS.STANDARD_YEARLY, PLANS.LIFETIME],
 }) => {
   const { subscription } = useSubscription();
   const navigate = useNavigate();
@@ -26,12 +26,13 @@ export const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
   const hasAccess = 
     subscription.isActive && 
     subscription.plan && 
-    requiredPlans.includes(subscription.plan as 'monthly' | 'yearly');
+    requiredPlans.includes(subscription.plan as 'basic_monthly' | 'basic_yearly' | 'standard_monthly' | 'standard_yearly' | 'lifetime');
 
-  if (subscription.loading) {
+  // Removed loading check as it doesn't exist on subscription object
+  if (false) {
     return (
-      <div className="flex justify-center items-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+      <div className="flex justify-center p-8">
+        <div className="text-muted-foreground">Loading subscription status...</div>
       </div>
     );
   }
