@@ -1,11 +1,53 @@
-
 import Navbar from '@/components/layout/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Sparkles } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 
 const Pricing = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
+  const handleCheckout = async (priceId: string, plan: string) => {
+    if (!user) {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please sign in to subscribe',
+        variant: 'destructive',
+      });
+      navigate('/auth');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { priceId, plan }
+      });
+
+      if (error) throw error;
+
+      // Open Stripe checkout in a new tab
+      window.open(data.url, '_blank');
+    } catch (error) {
+      console.error('Error creating checkout:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create checkout session',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const plans = [
     {
       name: 'Starter',
@@ -19,7 +61,8 @@ const Pricing = () => {
         'Mobile app access'
       ],
       cta: 'Get Started',
-      popular: false
+      popular: false,
+      priceId: null
     },
     {
       name: 'Professional',
@@ -36,7 +79,8 @@ const Pricing = () => {
         'Custom roadmaps'
       ],
       cta: 'Start Free Trial',
-      popular: true
+      popular: true,
+      priceId: 'price_1RJumRJjRarA6eH84kygqd80'
     },
     {
       name: 'Enterprise',
@@ -52,7 +96,8 @@ const Pricing = () => {
         'API access'
       ],
       cta: 'Contact Sales',
-      popular: false
+      popular: false,
+      priceId: null
     }
   ];
 
@@ -114,6 +159,16 @@ const Pricing = () => {
                         ? 'bg-gray-900 hover:bg-gray-800 text-white' 
                         : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
                     }`}
+                    onClick={() => {
+                      if (plan.priceId) {
+                        handleCheckout(plan.priceId, plan.name);
+                      } else if (plan.name === 'Enterprise') {
+                        window.open('mailto:enterprise@careervision.com?subject=Enterprise Plan Inquiry');
+                      } else {
+                        navigate('/dashboard');
+                      }
+                    }}
+                    disabled={loading}
                   >
                     {plan.cta}
                   </Button>
