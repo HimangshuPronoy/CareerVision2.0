@@ -3,51 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Sparkles } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
 
 const Pricing = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-
-  const handleCheckout = async (priceId: string, plan: string) => {
-    if (!user) {
-      toast({
-        title: 'Authentication Required',
-        description: 'Please sign in to subscribe',
-        variant: 'destructive',
-      });
-      navigate('/auth');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { priceId, plan }
-      });
-
-      if (error) throw error;
-
-      // Open Stripe checkout in a new tab
-      window.open(data.url, '_blank');
-    } catch (error) {
-      console.error('Error creating checkout:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to create checkout session',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const plans = [
     {
       name: 'Starter',
@@ -65,39 +22,57 @@ const Pricing = () => {
       priceId: null
     },
     {
-      name: 'Professional',
-      price: '$19',
+      name: 'Basic',
+      price: '$14.99',
       period: '/month',
-      description: 'For serious career advancement',
+      description: 'For job seekers getting started',
       features: [
-        'Advanced AI analysis',
-        'Personalized learning paths',
-        'Mentor matching',
-        'Premium job insights',
-        'Priority support',
-        'Export capabilities',
-        'Custom roadmaps'
+        'AI job scraping (50 jobs/month)',
+        'Basic skill analysis',
+        'Job match scoring',
+        'Email alerts',
+        'Resume templates',
+        'Priority support'
       ],
       cta: 'Start Free Trial',
-      popular: true,
+      popular: false,
       priceId: 'price_1RJumRJjRarA6eH84kygqd80'
     },
     {
-      name: 'Enterprise',
-      price: 'Custom',
-      description: 'For teams and organizations',
+      name: 'Standard',
+      price: '$17.99',
+      period: '/month',
+      description: 'For serious career advancement',
       features: [
-        'Everything in Professional',
-        'Team analytics',
-        'Custom integrations',
-        'Dedicated support',
-        'Advanced security',
-        'Training programs',
+        'Unlimited AI job scraping',
+        'Advanced skill analysis',
+        'Personalized learning paths',
+        'Premium job insights',
+        'Career coaching',
+        'Export capabilities',
         'API access'
       ],
-      cta: 'Contact Sales',
+      cta: 'Start Free Trial',
+      popular: true,
+      priceId: 'price_1RZqBRJjRarA6eH8MQhkccmL'
+    },
+    {
+      name: 'Lifetime',
+      price: '$99.99',
+      period: 'one-time',
+      description: 'One-time payment for lifetime access',
+      features: [
+        'Everything in Standard',
+        'Lifetime access to all features',
+        'Future updates included',
+        'Dedicated support',
+        'Advanced security',
+        'Exclusive content',
+        'Early access to new features'
+      ],
+      cta: 'Buy Now',
       popular: false,
-      priceId: null
+      priceId: 'price_1RZqDvJjRarA6eH8BJsvfBqf'
     }
   ];
 
@@ -159,16 +134,6 @@ const Pricing = () => {
                         ? 'bg-gray-900 hover:bg-gray-800 text-white' 
                         : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
                     }`}
-                    onClick={() => {
-                      if (plan.priceId) {
-                        handleCheckout(plan.priceId, plan.name);
-                      } else if (plan.name === 'Enterprise') {
-                        window.open('mailto:enterprise@careervision.com?subject=Enterprise Plan Inquiry');
-                      } else {
-                        navigate('/dashboard');
-                      }
-                    }}
-                    disabled={loading}
                   >
                     {plan.cta}
                   </Button>
